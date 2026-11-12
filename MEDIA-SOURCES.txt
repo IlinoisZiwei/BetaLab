@@ -1,0 +1,6 @@
+Media mapping (route names and profile measurements remain prototype labels):
+Corner Study: IMG_7080.mov original + outputs/trial2/videos/pose_output_h264.mp4 skeleton + trial2 wall.
+Long Reach: trial3 original + outputs/trial3/videos/pose_output.mp4 skeleton + trial3 wall. Skeleton top 76 pixels removed; original file untouched.
+Old Slab: trial1 original + trial1 wall; no skeleton sample available.
+All videos encoded as H.264, browser playback controls enabled.
+Skeleton videos are precomputed pose overlays, not regenerated from profile inputs.

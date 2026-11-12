@@ -1,0 +1,10 @@
+{
+  "description": "A climbing app for tracking routes, saving community beta, and privately reviewing attempts with video, notes, and movement drafts.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
