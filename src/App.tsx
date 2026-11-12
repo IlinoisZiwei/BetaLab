@@ -165,10 +165,10 @@ function MediaImage({routeId, wall = false, className = ""}: {routeId: string; w
   const media = routeMedia(routeId)
   return <img className={`real-media-image ${className}`} src={wall ? media.wall : media.poster} alt={wall ? "Climbing wall and holds" : "Climbing recording preview"} loading="lazy" />
 }
-function MediaVideo({routeId, pose = false, seekTime, measurementLabel}: {routeId: string; pose?: boolean; seekTime?: number; measurementLabel?: string}) {
+function MediaVideo({routeId, pose = false, seekTime, measurementLabel, sourceUrl}: {routeId: string; pose?: boolean; seekTime?: number; measurementLabel?: string; sourceUrl?: string}) {
   const media = routeMedia(routeId)
   const ref = useRef<HTMLVideoElement>(null)
-  const src = pose ? media.pose : media.video
+  const src = sourceUrl || (pose ? media.pose : media.video)
   const [playing, setPlaying] = useState(false)
   useEffect(() => setPlaying(false), [src])
   useEffect(() => {if (ref.current && seekTime !== undefined) ref.current.currentTime = seekTime}, [seekTime])
@@ -338,6 +338,9 @@ function App() {
   const [generationState, setGenerationState] =
     useState<"idle" | "preparing" | "adapting" | "ready" | "failed">("idle")
   const generationRun = useRef(0)
+  const [generationMessage, setGenerationMessage] = useState("")
+  const [generatedPreview, setGeneratedPreview] = useState<{video_url: string; height_cm: number; arm_span_cm: number; quality: string; first_frame?: number; last_frame?: number; fps?: number; detail_state?: string; detailed_video_url?: string; detailed_quality?: string; quick_seconds?: number; max_contact_gap_cm?: number; supported_max_contact_gap_cm?: number; unconfirmed_contacts?: number} | null>(null)
+  const [previewMode, setPreviewMode] = useState<"quick" | "detailed">("quick")
   const [expandedVideo, setExpandedVideo] = useState<string | null>(null)
   const [profile, setProfile] = useState({
     name: "",
@@ -436,16 +439,45 @@ function App() {
     window.setTimeout(() => setNotice(""), 2200)
   }
 
-  const startBodyPreview = () => {
+  const startBodyPreview = async () => {
     const run = ++generationRun.current
     setConfirmBody(false)
+    setGeneratedPreview(null)
+    setPreviewMode("quick")
+    let quickAvailable = false
+    setGenerationMessage("Connecting to the local solver")
     setGenerationState("preparing")
-    window.setTimeout(() => {
-      if (generationRun.current === run) setGenerationState("adapting")
-    }, 700)
-    window.setTimeout(() => {
-      if (generationRun.current === run) setGenerationState(bodyFailure ? "failed" : "ready")
-    }, 1500)
+    try {
+      const response = await fetch("/api/skeleton-jobs", {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({source_id: selectedRoute.id === "r1" ? "trial2" : "unsupported", height_cm: Number(profile.height), arm_span_cm: Number(profile.wingspan)})
+      })
+      const job = await response.json()
+      if (!response.ok) throw new Error(job.error || "Could not start preview")
+      while (generationRun.current === run) {
+        const check = await fetch(`/api/skeleton-jobs/${job.id}`)
+        if (!check.ok) throw new Error("Could not read the local task")
+        const result = await check.json()
+        if (generationRun.current !== run) return
+        setGenerationMessage(result.message)
+        if (result.state === "failed") throw new Error(result.message)
+        if (result.state === "ready") {
+          setGeneratedPreview(result)
+          setGenerationState("ready")
+          quickAvailable = true
+          if (!result.detail_state || result.detail_state === "ready" || result.detail_state === "failed") return
+        } else {
+          setGenerationState(result.state === "queued" ? "preparing" : "adapting")
+        }
+        await new Promise(resolve => window.setTimeout(resolve, quickAvailable ? 2000 : 500))
+      }
+    } catch (error) {
+      if (generationRun.current !== run) return
+      setGenerationMessage(error instanceof Error ? error.message : "Local server unavailable")
+      if (quickAvailable) {
+        setGeneratedPreview(previous => previous ? {...previous, detail_state: "failed"} : previous)
+      } else setGenerationState("failed")
+    }
   }
 
   const resetBodyPreview = () => {
@@ -454,7 +486,7 @@ function App() {
   }
 
   const home = (
-    <main className="screen home-screen home-redesign" style={{backgroundImage: `linear-gradient(180deg, rgba(225,240,253,.38) 0%, rgba(226,240,252,.18) 29%, rgba(235,245,253,.88) 61%, #f2f8fd 84%), url("${mediaPath("home-climbing-wall.png")}")`}}>
+    <main className="screen home-screen home-redesign" style={{backgroundImage: `linear-gradient(180deg, rgba(225,240,253,.38) 0%, rgba(226,240,252,.18) 29%, rgba(235,245,253,.88) 61%, rgba(232,244,254,.82) 84%, rgba(220,238,253,.40) 100%), url("${mediaPath("home-climbing-wall.png")}")`}}>
       <header className="home-header">
         <div className="brand-lockup">
           <span className="brand-mark" aria-hidden="true">
@@ -912,7 +944,7 @@ function App() {
             <AppButton
               className="generate-entry"
               onClick={() => {
-                if (!routeMedia(selectedRoute.id).pose) { flash("No skeleton recording for this route yet"); return }
+                if (selectedRoute.id !== "r1") { flash("Live generation currently supports Gym A V3 · Trial 2 only"); return }
                 if (profile.height && profile.wingspan) setConfirmBody(true)
                 else setMeasurementPrompt(true)
               }}
@@ -934,22 +966,26 @@ function App() {
               Original video
             </AppButton>
           </div>
-          {generationState === "failed" ? <div className="process-status"><strong>Preview could not be generated</strong><p>Your original video is unchanged.</p><button className="btn btn-outline" onClick={() => {setBodyFailure(false);resetBodyPreview();setConfirmBody(true)}}>Retry</button></div> : generationState !== "ready" ? (
+          {generationState === "failed" ? <div className="process-status"><strong>Preview could not be generated</strong><p>{generationMessage}</p><button className="btn btn-outline" onClick={() => {setBodyFailure(false);resetBodyPreview();setConfirmBody(true)}}>Retry</button></div> : generationState !== "ready" ? (
             <div className="generation-progress">
               <div>
                 <i />
               </div>
               <p>
-                {generationState === "preparing"
-                  ? "Reading height and wingspan"
-                  : "Building body-proportion preview"}
+                {generationMessage}
               </p>
             </div>
           ) : (
             <>
               <div className="video-frame skeleton-video-frame">
-                <MediaVideo routeId={selectedRoute.id} pose measurementLabel={`Your proportions · Height ${profile.height ? `${profile.height} cm` : "—"} · Arm span ${profile.wingspan ? `${profile.wingspan} cm` : "—"}`} />
+                <MediaVideo routeId={selectedRoute.id} pose sourceUrl={previewMode === "detailed" ? generatedPreview?.detailed_video_url : generatedPreview?.video_url} measurementLabel={`Your proportions · Height ${generatedPreview?.height_cm} cm · Arm span ${generatedPreview?.arm_span_cm} cm`} />
               </div>
+              <div className="preview-status-row"><span>{previewMode === "quick" ? "Quick preview" : "Detailed result"} · {(((generatedPreview?.last_frame ?? 975) - (generatedPreview?.first_frame ?? 0) + 1) / (generatedPreview?.fps ?? 30)).toFixed(2)} s</span>{generatedPreview?.detail_state === "ready" && <button className="btn btn-text" onClick={() => setPreviewMode(previewMode === "quick" ? "detailed" : "quick")}>{previewMode === "quick" ? "View detailed result" : "View quick preview"}</button>}</div>
+              <p className="muted small preview-note">Orange holds: active targets · Blue: route holds. Reconstructed positions.</p>
+              {previewMode === "quick" && (generatedPreview?.max_contact_gap_cm ?? 0) > 5 && <p className="muted small preview-note" role="status">Some frames need review: supported-target mismatch up to {(generatedPreview?.supported_max_contact_gap_cm ?? generatedPreview?.max_contact_gap_cm)?.toFixed(1)} cm. This does not establish whether a move is reachable.</p>}
+              {previewMode === "quick" && !!generatedPreview?.unconfirmed_contacts && <p className="muted small preview-note">{generatedPreview.unconfirmed_contacts} uncertain contact frames are not enforced. Original-label maximum: {generatedPreview.max_contact_gap_cm?.toFixed(1)} cm.</p>}
+              <p className="muted small preview-note">{previewMode === "quick" ? "Movement reference; contact gaps remain visible. Full mechanics not checked." : "Detailed constraints need review; not validated climbing advice."}</p>
+              {generatedPreview?.detail_state && generatedPreview.detail_state !== "ready" && <p className="muted small preview-note" role="status">{generatedPreview.detail_state === "failed" ? "Detailed analysis unavailable. Your quick preview is still available." : "Detailed analysis continues in the background."}</p>}
               {confidenceDemo && <details className="confidence-note"><summary>Some joints need review · demo</summary><p>Example only: left wrist and right ankle positions are uncertain in an obscured section. No confidence report is attached to this recording yet; actual locations will come from the algorithm.</p></details>}
               <div className="player-controls">
                 <PlaybackButton />
@@ -1286,14 +1322,14 @@ function App() {
         )}
         {screens[screen]}
         </div>
-        <nav className="bottom-nav" aria-label="Main navigation">
+        {screen !== "home" && <nav className="bottom-nav" aria-label="Main navigation">
           {([
             {id:"home", label:"Home", path:"M3 10 12 3l9 7v11h-6v-7H9v7H3Z"},
             {id:"community", label:"Community", path:"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M17 4a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-4"},
             {id:"gyms", label:"Go Climbing", path:"m2 21 7-16 5 10 3-6 5 12ZM6 12l3 2 3-2"},
             {id:"library", label:"My Library", path:"M4 3h16v18l-8-5-8 5Z"}
           ] as const).map(tab => {const active = tab.id === screen || (tab.id === "gyms" && ["gallery","route","workspace"].includes(screen)) || (tab.id === "community" && screen === "beta"); return <button key={tab.id} type="button" aria-current={active ? "page" : undefined} onClick={() => {setHistory([]);setScreen(tab.id);setNotice("");document.querySelector(".phone-content")?.scrollTo(0,0)}}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={tab.path}/></svg><span>{tab.label}</span></button>})}
-        </nav>
+        </nav>}
         {activeTerm && (
           <div className="term-sheet-backdrop" role="presentation">
             <section
@@ -1351,7 +1387,7 @@ function App() {
             </section>
           </div>
         )}
-        {confirmBody && <div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-labelledby="confirm-body-title"><h2 id="confirm-body-title">Confirm your proportions</h2><Field label="Height (cm)" value={profile.height} onChange={height => setProfile({...profile,height})}/><Field label="Arm span (cm)" value={profile.wingspan} onChange={wingspan => setProfile({...profile,wingspan})}/><p className="muted small">Preview workflow demo. Algorithm connection is pending.</p><details className="demo-controls"><summary>Prototype test states</summary><label><input type="checkbox" checked={confidenceDemo} onChange={e => setConfidenceDemo(e.target.checked)}/> Show low-confidence example</label><label><input type="checkbox" checked={bodyFailure} onChange={e => setBodyFailure(e.target.checked)}/> Simulate generation failure</label></details><button className="btn btn-solid" disabled={!(Number(profile.height)>0 && Number(profile.wingspan)>0)} onClick={startBodyPreview}>Generate preview</button><button className="btn btn-outline" onClick={() => setConfirmBody(false)}>Cancel</button></section></div>}
+        {confirmBody && <div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-labelledby="confirm-body-title"><h2 id="confirm-body-title">Confirm your proportions</h2><Field label="Height (cm)" value={profile.height} onChange={height => setProfile({...profile,height})}/><Field label="Arm span (cm)" value={profile.wingspan} onChange={wingspan => setProfile({...profile,wingspan})}/><p className="muted small">Trial 2 · Full video · 32.53 s. Quick preview first; detailed analysis continues in the background. Other dimensions are estimated.</p><details className="demo-controls"><summary>Prototype test states</summary><label><input type="checkbox" checked={confidenceDemo} onChange={e => setConfidenceDemo(e.target.checked)}/> Show low-confidence example</label><label><input type="checkbox" checked={bodyFailure} onChange={e => setBodyFailure(e.target.checked)}/> Simulate generation failure</label></details><button className="btn btn-solid" disabled={!(Number(profile.height)>0 && Number(profile.wingspan)>0)} onClick={startBodyPreview}>Generate preview</button><button className="btn btn-outline" onClick={() => setConfirmBody(false)}>Cancel</button></section></div>}
         {measurementPrompt && (
           <div className="modal-backdrop" role="presentation">
             <section

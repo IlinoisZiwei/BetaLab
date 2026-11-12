@@ -5,3 +5,10 @@ dist/
 .env.*
 !.env.example
 *.log
+
+local-server/jobs/
+__pycache__/
+
+local-server/benchmarks/
+
+local-server/prepared/

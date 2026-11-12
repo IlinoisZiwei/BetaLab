@@ -2634,7 +2634,7 @@ button:disabled { opacity:.4; cursor:not-allowed; }
 .library-empty .btn:hover { background:#d8e8f8; }
 
 /* Home exploration v2 — scoped so the rest of the app stays unchanged. */
-.home-screen.home-redesign { padding:30px 24px 30px; min-height:100%; display:flex; flex-direction:column; background-position:center top; }
+.home-screen.home-redesign { padding:30px 24px clamp(62px, 10vh, 94px); min-height:100%; display:flex; flex-direction:column; background-size:100% 100%, auto 100%; background-position:center, center top; background-color:#f2f8fd; }
 .home-redesign .home-header { padding:0; border:0; margin:0; }
 .home-redesign .brand-lockup { gap:8px; transform:none; }
 .home-redesign .brand-mark { width:29px; height:29px; border-radius:9px; font-size:16px; background:#345f94; }
@@ -2942,3 +2942,7 @@ button:disabled { opacity:.4; cursor:not-allowed; }
 .phone .workspace-flow .video-section:has(.inline-upload) { border-bottom:0; padding-bottom:0; }
 .phone .inline-upload .inline-buttons { justify-content:flex-end; }
 .phone .inline-upload .inline-buttons .btn-outline { padding-left:15px; }
+
+.preview-status-row {display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;color:#50748d;font-size:12px;}
+.preview-status-row .btn {font-size:12px;min-height:32px;padding:4px 0;}
+.preview-note {margin:4px 0!important;font-size:12px;line-height:1.45;}

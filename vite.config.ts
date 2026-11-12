@@ -33,6 +33,7 @@ react(),
       },
     },
     server: {
+      proxy: { '/api': { target: 'http://127.0.0.1:8787', changeOrigin: true } },
       host: process.env.FIGMA_DEV_SERVER_HOST || '0.0.0.0',
       port: parseInt(process.env.PORT || '8443'),
       strictPort: true,
