@@ -1,5 +1,9 @@
 # BetaLab
 
+Live demo: https://ilinoisziwei.github.io/BetaLab/
+
+Updates pushed to `main` are built and deployed by GitHub Actions.
+
 A mobile-first climbing prototype built with React, TypeScript and Vite. Includes Community, Go Climbing, My Library, attempt review, example suggestions and skeleton previews.
 
 ## Run locally
