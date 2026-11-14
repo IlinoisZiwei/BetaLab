@@ -486,7 +486,7 @@ function App() {
   }
 
   const home = (
-    <main className="screen home-screen home-redesign" style={{backgroundImage: `linear-gradient(180deg, rgba(225,240,253,.38) 0%, rgba(226,240,252,.18) 29%, rgba(235,245,253,.88) 61%, rgba(232,244,254,.82) 84%, rgba(220,238,253,.40) 100%), url("${mediaPath("home-climbing-wall.png")}")`}}>
+    <main className="screen home-screen home-redesign" style={{backgroundImage: `linear-gradient(180deg, rgba(225,240,253,.38) 0%, rgba(226,240,252,.18) 29%, rgba(235,245,253,.76) 52%, rgba(235,245,253,.48) 65%, rgba(232,244,254,.46) 84%, rgba(220,238,253,.40) 100%), url("${mediaPath("home-climbing-wall.png")}")`}}>
       <header className="home-header">
         <div className="brand-lockup">
           <span className="brand-mark" aria-hidden="true">
@@ -523,7 +523,7 @@ function App() {
       </header>
       <div className="home-editorial">
         <span className="home-eyebrow">YOUR NEXT MOVE STARTS HERE</span>
-        <h2>Find your<br/>next move<span>.</span></h2>
+        <h2>Find your<br/>next <span>move.</span></h2>
         <p>A new route. A different beta.<br/>Something that works for you.</p>
       </div>
       <nav className="home-entry-grid" aria-label="Primary">
@@ -1210,7 +1210,7 @@ function App() {
   }, [attempts, attemptRecords, jobs, libraryTab, savedBeta, wantedRoutes])
 
   const libraryScreen = (
-    <main className="screen with-header">
+    <main className="screen with-header library-page">
       <div className="tabs library-tabs">
         <button
           className={libraryTab === "attempts" ? "active" : ""}
