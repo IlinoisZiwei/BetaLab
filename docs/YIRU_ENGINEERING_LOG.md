@@ -11,7 +11,7 @@
 - 前端已强制登录并连接 API；注册后可填写或跳过身高、臂展，资料保存后下次登录恢复。场馆与路线来自数据库。
 - 上传流程可从设备选择视频，填写自定义标题与可选描述，选择 Private／Public；选择 Public 时可另选是否 Share as beta。上传视频进入 My Library，并关联所选 gym／route。真实上传视频的可见性和 Beta 分享可在视频管理中修改。
 - Community 普通列表展示所有数据库中的 Public 用户视频（是否 Beta 不影响普通 Community）；Community Beta 只展示 Public 且 `share_as_beta=true` 的视频。Beta 列表展示上传者身高、臂展及与当前用户可计算的差值；身体数据只在用户选择 Beta 分享时通过公开列表接口返回。
-- 预置 sample attempts 也显示在普通 Community，明确标注为 Preset sample，来源仍是仓库 bundled 路线视频，不作为用户上传记录或数据库权限对象。
+- 预置 sample attempts 与 Nora、Jo 的预置 Community Beta 视频都显示在普通 Community，并明确标注为 Public 示例；普通 Community 是 Community Beta 的超集。它们来源仍是仓库 bundled 路线视频，不作为用户上传记录或数据库权限对象。
 - 普通 Community 先展示视频列表，点开后进入全屏纵向视频浏览。详情显示标题和可展开描述，进入可视区域时尝试带声音播放，点按可播放／暂停；浏览器可能要求用户先点播放。视频详情和其他应用页面均支持左滑返回；桌面端可拖动左滑。
 - My Library 的 attempts 按 gym → route → video 分组；上传视频缩略图取自视频首帧。Community Beta 的公开视频卡和个人资料差值已接通。
 - 本机局域网展示可在 Vite 用 `--host 0.0.0.0 --port 5174` 监听，并在本地 `.env` 的 `APP_ORIGINS` 加入当前浏览器 origin；API 保持 `127.0.0.1:8788`，浏览器通过 Vite 同源代理访问。手机和电脑可同时通过同一 Wi-Fi 使用同一服务，各自登录。局域网 IP 可能因网络变化而改变，`.env` 不提交。

@@ -7,7 +7,7 @@ type LibraryTab = "attempts" | "saved" | "wanted"
 type WorkspaceEntry = "attempt" | "upload" | "community"
 type BetaOrigin = "community" | "workspace"
 type AttemptRecord = {id: string; routeId: string; date: string; duration: string; status: string; contentUrl?: string; title?: string}
-type CommunityFeedVideo = UserVideo & {is_preset_sample?: boolean}
+type CommunityFeedVideo = UserVideo & {is_preset_sample?: boolean; is_preset_beta?: boolean}
 
 const gyms = [
   { name: "Gym A", place: "North District", count: 2 },
@@ -31,6 +31,12 @@ const routes = [
     version: "Set 01",
     archived: false,
   },
+]
+
+const similarClimbers = [
+  {id:"b1",name:"Nora P.",height:170,wingspan:172,cue:"Right foot before the cross-through",time:"0:32",bio:"Static climber · prefers controlled movement"},
+  {id:"b2",name:"Sam K.",height:166,wingspan:170,cue:"Lower hip position through the reach",time:"0:19",bio:"Dynamic climber · compact reach"},
+  {id:"b3",name:"Jo M.",height:174,wingspan:176,cue:"Different start point for the same move",time:"0:16",bio:""},
 ]
 
 const betaCards = [
@@ -784,9 +790,22 @@ function App() {
       username: "betalab-demo", display_name: "BetaLab demo", is_preset_sample: true,
     }
   }), [attemptRecords, myVideos])
-  const communityVideos: CommunityFeedVideo[] = useMemo(() => [...publicVideos, ...communitySampleVideos].sort((a,b) => Date.parse(b.created_at) - Date.parse(a.created_at)), [publicVideos, communitySampleVideos])
+  const communityPresetBetaVideos: CommunityFeedVideo[] = useMemo(() => betaCards.map(card => {
+    const climber = similarClimbers.find(item => item.id === card.id)
+    const route = routes.find(item => item.name === card.route && item.gym === card.gym)
+    const [minutes, seconds] = (climber?.time ?? "0:00").split(":").map(Number)
+    return {
+      id:`preset-beta-${card.id}`,owner_id:"preset",route_id:route?.id ?? "r1",visibility:"public",share_as_beta:true,
+      original_name:`${card.author} beta.mp4`,title:`${card.author}'s beta`,description:climber?.bio || climber?.cue || "",
+      media_type:"video/mp4",size_bytes:0,duration_seconds:(minutes || 0)*60+(seconds || 0),
+      created_at:new Date("2025-05-14T12:00:00Z").toISOString(),content_url:routeMedia(route?.id ?? "r1").video,
+      username:card.author.toLowerCase().replace(/[^a-z0-9]+/g,""),display_name:card.author,
+      height_cm:climber?.height ?? null,arm_span_cm:climber?.wingspan ?? null,is_preset_sample:true,is_preset_beta:true,
+    }
+  }), [])
+  const communityVideos: CommunityFeedVideo[] = useMemo(() => [...publicVideos, ...communitySampleVideos, ...communityPresetBetaVideos].sort((a,b) => Date.parse(b.created_at) - Date.parse(a.created_at)), [publicVideos, communitySampleVideos, communityPresetBetaVideos])
   const communityResults = communityVideos.filter(video => {
-    const route = catalogRoutes.find(item => item.id === video.route_id)
+    const route = catalogRoutes.find(item => item.id === video.route_id) ?? routes.find(item => item.id === video.route_id)
     const term = communitySearch.trim().toLowerCase()
     return (!term || [video.title,video.display_name,video.username,route?.gym,route?.name,route?.grade].some(value => value?.toLowerCase().includes(term)))
       && (communityGymFilter === "All gyms" || route?.gym === communityGymFilter)
@@ -800,10 +819,10 @@ function App() {
       <div className="community-filters"><select aria-label="Filter by gym" value={communityGymFilter} onChange={event=>setCommunityGymFilter(event.target.value)}><option>All gyms</option>{catalogGyms.map(gym=><option key={gym.name}>{gym.name}</option>)}</select><select aria-label="Filter by grade" value={communityGradeFilter} onChange={event=>setCommunityGradeFilter(event.target.value)}><option>All grades</option>{[...new Set(catalogRoutes.map(route=>route.grade))].sort().map(grade=><option key={grade}>{grade}</option>)}</select></div>
       <div className="community-feed-list">
         {communityResults.map(video => {
-          const route = catalogRoutes.find(item => item.id === video.route_id)
+          const route = catalogRoutes.find(item => item.id === video.route_id) ?? routes.find(item => item.id === video.route_id)
           return <button type="button" className="community-feed-card" key={video.id} onClick={()=>{setCommunityVideoId(video.id);setExpandedCommunityDescription(null);go("communityVideo")}}>
             <span className="community-feed-thumbnail"><VideoThumbnail src={video.content_url} alt={`${video.title} video first frame`}/><span className="community-feed-play" aria-hidden="true">▶</span></span>
-            <span className="community-feed-card-body"><strong>{video.title}</strong><span className="community-feed-meta">{video.is_preset_sample ? "Preset sample" : video.display_name || video.username || "Community member"}{route ? ` · ${route.gym} · ${route.name} · ${route.grade}` : ""}</span></span>
+            <span className="community-feed-card-body"><strong>{video.title}</strong><span className="community-feed-meta">{video.is_preset_beta ? `${video.display_name} · Public · Preset Beta` : video.is_preset_sample ? "Public · Preset sample" : video.display_name || video.username || "Community member"}{route ? ` · ${route.gym} · ${route.name} · ${route.grade}` : ""}</span></span>
           </button>
         })}
         {communityResults.length === 0 && <div className="community-feed-empty"><strong>{communityVideos.length ? "No videos match these filters" : "No public videos yet"}</strong><p>{communityVideos.length ? "Try a different search or filter." : "Videos shared publicly will appear here."}</p></div>}
@@ -815,7 +834,7 @@ function App() {
     <main className="community-tiktok">
       {communityVideos.length === 0 ? <div className="community-tiktok-empty"><strong>No public videos yet</strong><span>Videos shared publicly will appear here.</span></div> : <div className="community-tiktok-scroll" key={communityVideoId ?? "community"}>
         {communityVideos.map(video => {
-          const route = catalogRoutes.find(item => item.id === video.route_id)
+          const route = catalogRoutes.find(item => item.id === video.route_id) ?? routes.find(item => item.id === video.route_id)
           const expanded = expandedCommunityDescription === video.id
           return <section className="community-tiktok-slide" id={`community-video-${video.id}`} key={video.id}>
             <CommunityVideoPlayer src={video.content_url} alt={`${video.title} video`} />
@@ -827,7 +846,7 @@ function App() {
               <button type="button" aria-label="Generate beta" onClick={() => {if (!route) return;setSelectedRoute(route);setSelectedGym(route.gym);setWorkspaceSource(video.title);if (profile.height && profile.wingspan) setConfirmBody(true);else {setScreen("profile");flash("Add your height and arm span to generate a personalized beta.")}}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2ZM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z"/></svg></button>
             </aside>
             <div className="community-tiktok-caption">
-              <div className="community-tiktok-author"><span>{(video.display_name || video.username || "C").slice(0,1).toUpperCase()}</span><strong>{video.is_preset_sample ? "BetaLab demo" : video.display_name || video.username}</strong><small>{video.is_preset_sample ? "Preset sample" : route ? `${route.gym} · ${route.grade}` : "Community"}</small></div>
+              <div className="community-tiktok-author"><span>{(video.display_name || video.username || "C").slice(0,1).toUpperCase()}</span><strong>{video.display_name || video.username || "Community member"}</strong><small>{video.is_preset_beta ? "Public · Preset Community Beta" : video.is_preset_sample ? "Public · Preset sample" : route ? `${route.gym} · ${route.grade}` : "Community"}</small></div>
               <strong className="community-tiktok-title">{video.title}</strong>
               {video.description && <button className={`community-tiktok-description${expanded ? " is-expanded" : ""}`} onClick={() => setExpandedCommunityDescription(expanded ? null : video.id)}>{video.description}{video.description.length > 90 && <b>{expanded ? "  less" : "  more"}</b>}</button>}
             </div>
@@ -1005,36 +1024,6 @@ function App() {
       </div>
     </main>
   )
-
-  const similarClimbers = [
-    {
-      id: "b1",
-      name: "Nora P.",
-      height: 170,
-      wingspan: 172,
-      cue: "Right foot before the cross-through",
-      time: "0:32",
-      bio: "Static climber · prefers controlled movement",
-    },
-    {
-      id: "b2",
-      name: "Sam K.",
-      height: 166,
-      wingspan: 170,
-      cue: "Lower hip position through the reach",
-      time: "0:19",
-      bio: "Dynamic climber · compact reach",
-    },
-    {
-      id: "b3",
-      name: "Jo M.",
-      height: 174,
-      wingspan: 176,
-      cue: "Different start point for the same move",
-      time: "0:16",
-      bio: "",
-    },
-  ]
 
   const selectedBeta =
     similarClimbers.find((climber) => climber.id === workspaceBetaId) ??
