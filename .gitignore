@@ -8,6 +8,8 @@ dist/
 
 local-server/jobs/
 __pycache__/
+.venv/
+data/uploads/
 
 local-server/benchmarks/
 

@@ -1,10 +1,13 @@
 import { useMemo, useRef, useState, useEffect } from "react"
+import { api, ApiError, type Session, type Gym, type Route, type UserVideo } from "./api"
 
-type Screen = "home" | "account" | "profile" | "community" | "gyms" | "gallery" | "route" | "workspace" | "beta" | "library"
+type Screen = "home" | "account" | "profile" | "community" | "communityVideo" | "gyms" | "gallery" | "route" | "workspace" | "beta" | "library"
 
 type LibraryTab = "attempts" | "saved" | "wanted"
 type WorkspaceEntry = "attempt" | "upload" | "community"
 type BetaOrigin = "community" | "workspace"
+type AttemptRecord = {id: string; routeId: string; date: string; duration: string; status: string; contentUrl?: string; title?: string}
+type CommunityFeedVideo = UserVideo & {is_preset_sample?: boolean}
 
 const gyms = [
   { name: "Gym A", place: "North District", count: 2 },
@@ -27,15 +30,6 @@ const routes = [
     grade: "V5",
     version: "Set 01",
     archived: false,
-  },
-  {
-    gym: "Gym A",
-    id: "r3",
-    name: "Old Slab",
-    grade: "V2",
-    version: "Set 04",
-    archived: true,
-    showArchiveBadge: true,
   },
 ]
 
@@ -175,6 +169,35 @@ function MediaVideo({routeId, pose = false, seekTime, measurementLabel, sourceUr
   if (!src) return <p className="empty-state">No skeleton recording for this route yet.</p>
   return <><video ref={ref} key={src} className="real-media-video" src={src} poster={pose ? undefined : media.poster} controls playsInline preload="metadata" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} />{measurementLabel && <span className={`video-body-label${playing ? " is-hidden" : ""}`} aria-hidden={playing}>{measurementLabel}</span>}</>
 }
+function VideoThumbnail({src, alt}: {src: string; alt: string}) {
+  const ref = useRef<HTMLVideoElement>(null)
+  const revealFirstFrame = () => {
+    const video = ref.current
+    if (!video || video.readyState < 2) return
+    video.currentTime = Math.min(0.1, video.duration || 0.1)
+  }
+  return <video ref={ref} className="real-media-video-thumbnail" src={src} aria-label={alt} muted playsInline preload="metadata" onLoadedData={revealFirstFrame} onSeeked={event => event.currentTarget.pause()} />
+}
+function CommunityVideoPlayer({src, alt}: {src: string; alt: string}) {
+  const ref = useRef<HTMLVideoElement>(null)
+  const [playing, setPlaying] = useState(false)
+  useEffect(() => {
+    const video = ref.current
+    if (!video) return
+    const root = video.closest(".community-tiktok-scroll")
+    const observer = new IntersectionObserver(entries => {
+      const visible = entries.some(entry => entry.isIntersecting && entry.intersectionRatio >= 0.6)
+      if (visible) void video.play().catch(() => setPlaying(false))
+      else video.pause()
+    }, {root, threshold:[0,0.6,1]})
+    observer.observe(video)
+    return () => { observer.disconnect(); video.pause() }
+  }, [src])
+  return <div className="community-video-player">
+    <video ref={ref} className="community-tiktok-video" src={src} aria-label={alt} playsInline loop preload="metadata" onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)} onClick={event=>{const video=event.currentTarget;if(video.paused)void video.play();else video.pause()}} />
+    {!playing && <button type="button" className="community-video-play-toggle" aria-label="Play video" onClick={()=>void ref.current?.play()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 12 7-12 7V5Z"/></svg></button>}
+  </div>
+}
 
 function Placeholder({
   children,
@@ -216,18 +239,22 @@ function App() {
   const [search, setSearch] = useState("")
   const [gymFilter, setGymFilter] = useState("All gyms")
   const [gradeFilter, setGradeFilter] = useState("All grades")
+  const [communitySearch, setCommunitySearch] = useState("")
+  const [communityGymFilter, setCommunityGymFilter] = useState("All gyms")
+  const [communityGradeFilter, setCommunityGradeFilter] = useState("All grades")
   const [selectedGym, setSelectedGym] = useState("Gym A")
   const [selectedRoute, setSelectedRoute] = useState(routes[0])
   const [savedBeta, setSavedBeta] = useState<string[]>([])
   const [wantedRoutes, setWantedRoutes] = useState<string[]>([])
   const [attempts, setAttempts] = useState<string[]>(["r1"])
-  const [attemptRecords, setAttemptRecords] = useState([
+  const [attemptRecords, setAttemptRecords] = useState<AttemptRecord[]>([
     {
       id: "a1",
       routeId: "r1",
       date: "14 May 2025",
       duration: "0:18",
       status: "Private",
+      contentUrl: undefined as string | undefined,
     },
     {
       id: "a2",
@@ -330,6 +357,12 @@ function App() {
   const [uploadState, setUploadState] =
     useState<"hidden" | "empty" | "preview" | "loading" | "saved">("hidden")
   const [uploadPrivacy, setUploadPrivacy] = useState<"Private" | "Public" | null>(null)
+  const [selectedUpload, setSelectedUpload] = useState<File | null>(null)
+  const [shareAsBeta, setShareAsBeta] = useState(false)
+  const [uploadTitle, setUploadTitle] = useState("")
+  const [uploadDescription, setUploadDescription] = useState("")
+  const [selectedUploadUrl, setSelectedUploadUrl] = useState("")
+  const uploadInputRef = useRef<HTMLInputElement>(null)
   const [historyVisible, setHistoryVisible] = useState(false)
   const [cueTime, setCueTime] = useState(7)
   const jumpToCueTime = (time: number) => {
@@ -354,6 +387,111 @@ function App() {
   const [account, setAccount] = useState({ email: "", password: "" })
   const [accountMode, setAccountMode] = useState<"signin" | "signup">("signin")
   const [measurementPrompt, setMeasurementPrompt] = useState(false)
+
+  const [authLoading, setAuthLoading] = useState(true)
+  const [authBusy, setAuthBusy] = useState(false)
+  const [authError, setAuthError] = useState("")
+  const [session, setSession] = useState<Session | null>(null)
+  const [catalog, setCatalog] = useState<{gyms: Gym[]; routes: Route[]} | null>(null)
+  const [catalogError, setCatalogError] = useState("")
+  const [catalogLoading, setCatalogLoading] = useState(false)
+  const [publicVideos, setPublicVideos] = useState<UserVideo[]>([])
+  const [routeBetaVideos, setRouteBetaVideos] = useState<UserVideo[]>([])
+  const [expandedCommunityDescription, setExpandedCommunityDescription] = useState<string | null>(null)
+  const [communityVideoId, setCommunityVideoId] = useState<string | null>(null)
+  const globalSwipeStart = useRef<{x:number;y:number;pointerId:number} | null>(null)
+  const [myVideos, setMyVideos] = useState<UserVideo[]>([])
+  const authEpoch = useRef(0)
+  const applySession = (value: Session | null) => {
+    setSession(value); setSignedIn(!!value)
+    setProfile(value ? {name: value.user.display_name, height: value.user.height_cm?.toString() ?? "", wingspan: value.user.arm_span_cm?.toString() ?? ""} : {name: "", height: "", wingspan: ""})
+    setAccount({email: value?.user.username ?? "", password: ""})
+    setCatalog(null)
+  }
+  const refreshSession = async () => {
+    setAuthLoading(true); setAuthError("")
+    try { applySession(await api<Session>("/auth/me")) }
+    catch (error) {
+      applySession(null)
+      if (!(error instanceof ApiError && error.status === 401)) setAuthError((error as Error).message)
+    } finally { setAuthLoading(false) }
+  }
+  useEffect(() => { void refreshSession() }, [])
+  const loadCatalog = async () => {
+    const epoch = authEpoch.current
+    setCatalogLoading(true); setCatalogError("")
+    try {
+      const [g, r] = await Promise.all([api<{items: Gym[]}>("/gyms"), api<{items: Route[]}>("/routes?include_archived=true&limit=100")])
+      if (epoch === authEpoch.current) setCatalog({gyms: g.items, routes: r.items})
+    } catch (error) {
+      if (epoch !== authEpoch.current) return
+      if (error instanceof ApiError && error.status === 401) { applySession(null); setAuthError("Your session expired. Please sign in again.") }
+      else setCatalogError((error as Error).message)
+    } finally { if (epoch === authEpoch.current) setCatalogLoading(false) }
+  }
+  useEffect(() => { if (session) void loadCatalog() }, [session?.user.id])
+  useEffect(() => {
+    if (!session) { setMyVideos([]); return }
+    let cancelled = false
+    api<{items: UserVideo[]}>("/videos?owned=true&limit=100").then(result => {
+      if (cancelled) return
+      setMyVideos(result.items)
+      setAttemptRecords(records => {
+        const saved = result.items.map(video => ({id:video.id,routeId:video.route_id,date:new Date(video.created_at).toLocaleDateString(),duration:`${Math.floor(video.duration_seconds/60)}:${String(Math.floor(video.duration_seconds%60)).padStart(2,"0")}`,status:video.visibility === "public" ? "Public" : "Private",contentUrl:video.content_url,title:video.title}))
+        return [...saved,...records.filter(record => !result.items.some(video => video.id === record.id))]
+      })
+      setAttempts([...new Set(result.items.map(video => video.route_id))])
+    }).catch(error => setCatalogError((error as Error).message))
+    return () => { cancelled = true }
+  }, [session?.user.id])
+  useEffect(() => {
+    if (!session || screen !== "community") return
+    let cancelled = false
+    api<{items: UserVideo[]}>("/videos?owned=false&limit=100").then(result => { if (!cancelled) setPublicVideos(result.items) }).catch(error => { if (!cancelled) setCatalogError((error as Error).message) })
+    return () => { cancelled = true }
+  }, [session?.user.id, screen])
+  useEffect(() => {
+    if (!session || screen !== "workspace" || !selectedRoute.id) return
+    let cancelled = false
+    api<{items: UserVideo[]}>(`/videos?owned=false&route_id=${encodeURIComponent(selectedRoute.id)}&share_as_beta=true&limit=100`).then(result => { if (!cancelled) setRouteBetaVideos(result.items) }).catch(error => { if (!cancelled) setCatalogError((error as Error).message) })
+    return () => { cancelled = true }
+  }, [session?.user.id, screen, selectedRoute.id])
+  const submitAccount = async () => {
+    setAuthBusy(true); setAuthError("")
+    try {
+      const value = await api<Session>(`/auth/${accountMode === "signup" ? "register" : "login"}`, {method: "POST", body: {username: account.email.trim(), password: account.password}})
+      authEpoch.current++; applySession(value); setHistory([]); setScreen("home")
+      if (accountMode === "signup") setMeasurementPrompt(true)
+      else flash("Signed in")
+    } catch (error) { setAuthError((error as Error).message) }
+    finally { setAuthBusy(false) }
+  }
+  const saveProfile = async () => {
+    if (!session) { setAccountMode("signin"); go("account"); return false }
+    if ((profile.height.trim() && !Number.isFinite(Number(profile.height))) || (profile.wingspan.trim() && !Number.isFinite(Number(profile.wingspan)))) {
+      setAuthError("Please enter valid numbers for your measurements."); return false
+    }
+    setAuthBusy(true); setAuthError("")
+    try {
+      const result = await api<{user: Session["user"]}>("/profile", {method: "PUT", csrf: session.csrf_token, body: {display_name: profile.name.trim(), height_cm: profile.height.trim() ? Number(profile.height) : null, arm_span_cm: profile.wingspan.trim() ? Number(profile.wingspan) : null}})
+      setSession({...session, user: result.user}); flash("Profile saved"); return true
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) { authEpoch.current++; applySession(null) }
+      setAuthError((error as Error).message); return false
+    } finally { setAuthBusy(false) }
+  }
+  const signOut = async () => {
+    if (!session) return
+    setAuthBusy(true); setAuthError("")
+    try {
+      await api<void>("/auth/logout", {method: "POST", csrf: session.csrf_token})
+      authEpoch.current++; applySession(null); setComments([]); setCommentDrafts({}); setReplyDrafts({})
+      setMeasurementPrompt(false); setAccountMode("signin"); go("account"); flash("Signed out")
+    } catch (error) { setAuthError((error as Error).message) }
+    finally { setAuthBusy(false) }
+  }
+  const catalogGyms = catalog?.gyms.map(g => ({name: g.name, place: g.location_label, count: g.active_route_count})) ?? []
+  const catalogRoutes = catalog?.routes.map(r => ({id: r.id, gym: catalog.gyms.find(g => g.id === r.gym_id)?.name ?? "", name: r.name, grade: r.grade, version: r.set_label, archived: r.archived, showArchiveBadge: true})) ?? []
 
   const go = (next: Screen) => {
     setHistory((items) => [...items, screen])
@@ -392,6 +530,9 @@ function App() {
       setHasAttempt(false)
       setUploadState("empty")
       setUploadPrivacy(null)
+      setSelectedUpload(null)
+      setSelectedUploadUrl("")
+      setShareAsBeta(false)
     } else if (entry === "attempt") {
       setHasAttempt(true)
       setUploadState("hidden")
@@ -420,6 +561,7 @@ function App() {
     account: "Account",
     profile: "Profile",
     community: "Community",
+    communityVideo: "Community",
     gyms: "Select Gym",
     gallery: selectedGym,
     route: "Route",
@@ -428,7 +570,7 @@ function App() {
     library: "My Library",
   }
 
-  const header = screen !== "home" && (
+  const header = screen !== "home" && screen !== "community" && screen !== "communityVideo" && (
     <header className="topbar">
       <AppButton variant="text" onClick={back} className="back">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6" /></svg><span>Back</span>
@@ -506,12 +648,7 @@ function App() {
           type="button"
           aria-label="Profile and account"
           onClick={() => {
-            if (
-              account.email ||
-              profile.name ||
-              profile.height ||
-              profile.wingspan
-            ) {
+            if (signedIn) {
               go("profile")
             } else {
               setAccountMode("signin")
@@ -548,12 +685,14 @@ function App() {
   )
 
   const accountScreen = (
-    <main className="screen with-header form-page">
+    <main className="screen with-header form-page auth-form-page">
+      <h1>{accountMode === "signin" ? "Welcome back" : "Join BetaLab"}</h1>
       <p>
         {accountMode === "signin"
-          ? "Sign in to sync across devices. This is optional."
-          : "Create an optional account. Body measurements help find closer beta."}
+          ? "Sign in with your username and password."
+          : "Create an account, then optionally add your body measurements."}
       </p>
+      {authError && <p className="form-error" role="alert">{authError}</p>}
       <div className="segmented">
         <button
           className={accountMode === "signin" ? "active" : ""}
@@ -571,51 +710,34 @@ function App() {
         </button>
       </div>
       <Field
-        label="Email"
+        label="Username"
         value={account.email}
         onChange={(email) => setAccount({ ...account, email })}
-        placeholder="name@example.com"
+        placeholder="3–32 letters, numbers or underscores"
       />
       <Field
         label="Password"
         value={account.password}
         onChange={(password) => setAccount({ ...account, password })}
-        placeholder="Demo password"
+        placeholder="At least 8 characters"
         type="password"
       />
       <div className="stack-actions">
         <AppButton
-          onClick={() => {
-            setSignedIn(true)
-            if (accountMode === "signup") {
-              setMeasurementPrompt(true)
-            } else {
-              flash("Signed in — returning to your prior action")
-              back()
-            }
-          }}
+          disabled={authBusy || authLoading || !account.email.trim() || account.password.length < 8}
+          onClick={() => void submitAccount()}
         >
-          {accountMode === "signup" ? "Create account" : "Submit"}
-        </AppButton>
-        <AppButton variant="outline" onClick={back}>
-          Cancel
+          {authBusy ? "Please wait…" : accountMode === "signup" ? "Create account" : "Sign in"}
         </AppButton>
       </div>
-      <p className="muted small">
-        Your current content is preserved. No profile is required.
-      </p>
+      <p className="muted small">Usernames are case-insensitive. Passwords must contain at least 8 characters.</p>
     </main>
   )
 
   const profileScreen = (
     <main className="screen with-header form-page">
-      <p>View and update your optional account and body information.</p>
-      <Field
-        label="Email"
-        value={account.email}
-        onChange={(email) => setAccount({ ...account, email })}
-        placeholder="name@example.com"
-      />
+      <p>Signed in as <strong>{session?.user.username}</strong>. Update your name and optional measurements.</p>
+      {authError && <p className="form-error" role="alert">{authError}</p>}
       <Field
         label="Name"
         value={profile.name}
@@ -638,85 +760,89 @@ function App() {
       </div>
       <div className="stack-actions">
         <AppButton
-          onClick={() => {
-            flash("Profile saved")
-            back()
-          }}
+          disabled={authBusy || !profile.name.trim()}
+          onClick={() => void saveProfile()}
         >
-          Save
+          {authBusy ? "Saving…" : "Save"}
         </AppButton>
         <AppButton variant="outline" onClick={back}>
           Skip
         </AppButton>
       </div>
-      <p className="privacy-box">
-        Profile details are private unless you choose to share them.
-      </p>
+      <AppButton variant="outline" disabled={authBusy} onClick={() => void signOut()}>Sign out</AppButton>
+      <p className="privacy-box">Measurements are optional. Height: 100–230 cm; arm span: 80–260 cm.</p>
     </main>
   )
 
-  const filteredBeta = betaCards.filter((card) => {
-    const term = search.toLowerCase()
-    const matchesSearch = [card.author, card.gym, card.route, card.grade].some(
-      (value) => value.toLowerCase().includes(term),
-    )
-    return (
-      matchesSearch &&
-      (gymFilter === "All gyms" || card.gym === gymFilter) &&
-      (gradeFilter === "All grades" || card.grade === gradeFilter)
-    )
+  const communitySampleVideos: CommunityFeedVideo[] = useMemo(() => attemptRecords.filter(record => record.id.startsWith("a") && !myVideos.some(video => video.id === record.id)).map(record => {
+    const [minutes, seconds] = record.duration.split(":").map(Number)
+    return {
+      id: `sample-${record.id}`, owner_id: "preset", route_id: record.routeId, visibility: "public", share_as_beta: false,
+      original_name: `${record.title ?? `Attempt ${record.id.slice(1)}`}.mp4`, title: record.title ?? `Attempt ${record.id.slice(1)}`,
+      description: "", media_type: "video/mp4", size_bytes: 0, duration_seconds: (minutes || 0) * 60 + (seconds || 0),
+      created_at: new Date(record.date).toISOString(), content_url: routeMedia(record.routeId).video,
+      username: "betalab-demo", display_name: "BetaLab demo", is_preset_sample: true,
+    }
+  }), [attemptRecords, myVideos])
+  const communityVideos: CommunityFeedVideo[] = useMemo(() => [...publicVideos, ...communitySampleVideos].sort((a,b) => Date.parse(b.created_at) - Date.parse(a.created_at)), [publicVideos, communitySampleVideos])
+  const communityResults = communityVideos.filter(video => {
+    const route = catalogRoutes.find(item => item.id === video.route_id)
+    const term = communitySearch.trim().toLowerCase()
+    return (!term || [video.title,video.display_name,video.username,route?.gym,route?.name,route?.grade].some(value => value?.toLowerCase().includes(term)))
+      && (communityGymFilter === "All gyms" || route?.gym === communityGymFilter)
+      && (communityGradeFilter === "All grades" || route?.grade === communityGradeFilter)
   })
 
   const communityScreen = (
     <main className="screen with-header community-feed">
-      <div className="community-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input aria-label="Search community" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search routes, climbers or gyms"/>{search && <button type="button" aria-label="Clear community search" onClick={() => setSearch("")}>×</button>}</div>
-      <div className="community-filters">
-        <select aria-label="Gym" value={gymFilter} onChange={e => setGymFilter(e.target.value)}><option>All gyms</option><option>Gym A</option><option>Gym B</option></select>
-        <select aria-label="Grade" value={gradeFilter} onChange={e => setGradeFilter(e.target.value)}><option>All grades</option><option>V3</option><option>V5</option></select>
-      </div>
-      <div className="section-heading">
-        <h2>Community videos</h2>
-      </div>
-      <div className="card-list">
-        {attemptRecords.filter(record => record.status.startsWith("Public")).filter(record => {const route = routes.find(r => r.id === record.routeId)!; return (gymFilter === "All gyms" || route.gym === gymFilter) && (gradeFilter === "All grades" || route.grade === gradeFilter) && (!search || route.name.toLowerCase().includes(search.toLowerCase()))}).map(record => <article className="video-card" key={record.id}><button className="community-video-link" onClick={() => {const route = routes.find(r => r.id === record.routeId)!;setSelectedRoute(route);setSelectedGym(route.gym);openWorkspace(`${record.date} · ${route.name}`, "attempt", record.id)}}><span className="community-video-media"><MediaImage routeId={record.routeId}/></span><span className="card-body"><strong>Your public video</strong><small>{routeLabel(record.routeId)} · {record.date}</small></span></button></article>)}
-        {filteredBeta.map((card) => (
-          <article className="video-card" key={card.id}>
-            <button
-              className="community-video-link"
-              type="button"
-              onClick={() => {
-                const targetRoute =
-                  routes.find((route) => route.name === card.route) ?? routes[0]
-                setSelectedGym(card.gym)
-                setSelectedRoute(targetRoute)
-                setWorkspaceBetaId(card.id)
-                setBetaOrigin("community")
-                resetBodyPreview()
-                setHasAttempt(attempts.includes(targetRoute.id))
-                go("beta")
-              }}
-            >
-              <span className="community-video-media">
-                <MediaImage routeId={routes.find(route => route.name === card.route)?.id ?? "r1"} />
-                <span className="community-play-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="m7 4.5 8 5.5-8 5.5Z" /></svg></span>
-              </span>
-              <span className="card-body">
-                <span className="community-card-summary"><span className="community-card-location"><strong>{card.gym}</strong><span className="community-card-grade">{card.grade}</span></span><span className="community-card-author">By {card.author}</span></span>
-              </span>
-            </button>
-          </article>
-        ))}
-        {filteredBeta.length === 0 && !attemptRecords.some(r => r.status.startsWith("Public")) && (
-          <div className="empty-state">
-            <strong>No beta found</strong>
-            <p>Try clearing a filter.</p>
-          </div>
-        )}
+      <header className="community-feed-intro"><h1>Community</h1><p>Climbing videos shared by the community.</p></header>
+      <div className="community-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input aria-label="Search community videos" value={communitySearch} onChange={event=>setCommunitySearch(event.target.value)} placeholder="Search videos, climbers, routes"/>{communitySearch && <button type="button" aria-label="Clear search" onClick={()=>setCommunitySearch("")}>×</button>}</div>
+      <div className="community-filters"><select aria-label="Filter by gym" value={communityGymFilter} onChange={event=>setCommunityGymFilter(event.target.value)}><option>All gyms</option>{catalogGyms.map(gym=><option key={gym.name}>{gym.name}</option>)}</select><select aria-label="Filter by grade" value={communityGradeFilter} onChange={event=>setCommunityGradeFilter(event.target.value)}><option>All grades</option>{[...new Set(catalogRoutes.map(route=>route.grade))].sort().map(grade=><option key={grade}>{grade}</option>)}</select></div>
+      <div className="community-feed-list">
+        {communityResults.map(video => {
+          const route = catalogRoutes.find(item => item.id === video.route_id)
+          return <button type="button" className="community-feed-card" key={video.id} onClick={()=>{setCommunityVideoId(video.id);setExpandedCommunityDescription(null);go("communityVideo")}}>
+            <span className="community-feed-thumbnail"><VideoThumbnail src={video.content_url} alt={`${video.title} video first frame`}/><span className="community-feed-play" aria-hidden="true">▶</span></span>
+            <span className="community-feed-card-body"><strong>{video.title}</strong><span className="community-feed-meta">{video.is_preset_sample ? "Preset sample" : video.display_name || video.username || "Community member"}{route ? ` · ${route.gym} · ${route.name} · ${route.grade}` : ""}</span></span>
+          </button>
+        })}
+        {communityResults.length === 0 && <div className="community-feed-empty"><strong>{communityVideos.length ? "No videos match these filters" : "No public videos yet"}</strong><p>{communityVideos.length ? "Try a different search or filter." : "Videos shared publicly will appear here."}</p></div>}
       </div>
     </main>
   )
 
-  const gymResults = gyms.filter(gym => `${gym.name} ${gym.place}`.toLowerCase().includes(search.trim().toLowerCase()))
+  const communityVideoScreen = (
+    <main className="community-tiktok">
+      {communityVideos.length === 0 ? <div className="community-tiktok-empty"><strong>No public videos yet</strong><span>Videos shared publicly will appear here.</span></div> : <div className="community-tiktok-scroll" key={communityVideoId ?? "community"}>
+        {communityVideos.map(video => {
+          const route = catalogRoutes.find(item => item.id === video.route_id)
+          const expanded = expandedCommunityDescription === video.id
+          return <section className="community-tiktok-slide" id={`community-video-${video.id}`} key={video.id}>
+            <CommunityVideoPlayer src={video.content_url} alt={`${video.title} video`} />
+            <div className="community-tiktok-shade" />
+            <div className="community-tiktok-top"><button type="button" onClick={back} aria-label="Back">‹</button><span aria-hidden="true" /></div>
+            <aside className="community-tiktok-actions" aria-label="Video actions">
+              <button type="button" aria-label="Like video" aria-pressed={likedBeta.includes(video.id)} onClick={() => toggle(video.id,likedBeta,setLikedBeta)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg></button>
+              <button type="button" aria-label="Save video" aria-pressed={savedBeta.includes(video.id)} onClick={() => toggle(video.id,savedBeta,setSavedBeta)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z"/></svg></button>
+              <button type="button" aria-label="Generate beta" onClick={() => {if (!route) return;setSelectedRoute(route);setSelectedGym(route.gym);setWorkspaceSource(video.title);if (profile.height && profile.wingspan) setConfirmBody(true);else {setScreen("profile");flash("Add your height and arm span to generate a personalized beta.")}}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2ZM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z"/></svg></button>
+            </aside>
+            <div className="community-tiktok-caption">
+              <div className="community-tiktok-author"><span>{(video.display_name || video.username || "C").slice(0,1).toUpperCase()}</span><strong>{video.is_preset_sample ? "BetaLab demo" : video.display_name || video.username}</strong><small>{video.is_preset_sample ? "Preset sample" : route ? `${route.gym} · ${route.grade}` : "Community"}</small></div>
+              <strong className="community-tiktok-title">{video.title}</strong>
+              {video.description && <button className={`community-tiktok-description${expanded ? " is-expanded" : ""}`} onClick={() => setExpandedCommunityDescription(expanded ? null : video.id)}>{video.description}{video.description.length > 90 && <b>{expanded ? "  less" : "  more"}</b>}</button>}
+            </div>
+          </section>
+        })}
+      </div>}
+    </main>
+  )
+
+  useEffect(() => {
+    if (screen !== "communityVideo" || !communityVideoId) return
+    requestAnimationFrame(() => document.getElementById(`community-video-${communityVideoId}`)?.scrollIntoView({block:"start"}))
+  }, [screen, communityVideoId, communityVideos])
+
+  const gymResults = catalogGyms.filter(gym => `${gym.name} ${gym.place}`.toLowerCase().includes(search.trim().toLowerCase()))
   const gymsScreen = (
     <main className="screen with-header gym-selection">
       <header className="gym-selection-intro"><h1>Where to climb?</h1></header>
@@ -771,9 +897,9 @@ function App() {
         </section>
       )}
 
-      {selectedGym === "Gym B" && <div className="empty-state"><strong>No route footage yet</strong><p>We are collecting routes for this gym. Browse Gym A for the available samples.</p></div>}
+      {catalog && !catalogRoutes.some(r => r.gym === selectedGym) && <div className="empty-state"><strong>No route footage yet</strong><p>We are collecting routes for this gym. Browse Gym A for the available samples.</p></div>}
       <div className="card-list route-list">
-        {routes
+        {catalogRoutes
           .filter(
             (route) =>
               route.gym === selectedGym && (gradeFilter === "All grades" || route.grade === gradeFilter),
@@ -817,9 +943,14 @@ function App() {
     </main>
   )
 
-  const routeAttempts = attemptRecords.filter(
-    (attempt) => attempt.routeId === selectedRoute.id,
-  )
+  const routeAttempts = [
+    ...attemptRecords.filter(record => record.id.startsWith("a") && record.routeId === selectedRoute.id).map(record => ({...record,title:(record as typeof record & {title?:string}).title ?? `Attempt ${record.id.slice(1)}`,sourceUrl:routeMedia(record.routeId).video})),
+    ...myVideos.filter(video => video.route_id === selectedRoute.id).map(video => ({
+    id: video.id, routeId: video.route_id, date: new Date(video.created_at).toLocaleDateString(),
+    duration: `${Math.floor(video.duration_seconds / 60)}:${String(Math.floor(video.duration_seconds % 60)).padStart(2, "0")}`,
+    status: video.visibility === "public" ? "Public" : "Private", contentUrl: video.content_url, title: video.title, sourceUrl:video.content_url,
+  }))
+  ]
 
   const routeScreen = (
     <main className="screen with-header route-detail-page">
@@ -855,9 +986,9 @@ function App() {
               )
             }
           >
-            <span className="attempt-cover"><MediaImage routeId={selectedRoute.id} /><span className="attempt-play" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="m5 3 7 5-7 5Z" /></svg></span></span>
+            <span className="attempt-cover"><VideoThumbnail src={attempt.sourceUrl} alt={`${attempt.title} first frame`} /><span className="attempt-play" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="m5 3 7 5-7 5Z" /></svg></span></span>
             <span>
-              <b>Attempt {routeAttempts.length - index}</b>
+              <b>{attempt.title}</b>
               <small>
                 {attempt.date} · {attempt.duration}
               </small>
@@ -1023,37 +1154,79 @@ function App() {
     </main>
   )
 
-  const saveUploadedAttempt = () => {
-    if (!uploadPrivacy) return
+  const chooseUpload = (file?: File) => {
+    if (!file) return
+    const extension = file.name.toLowerCase().split(".").pop()
+    if (!(extension === "mp4" || extension === "mov") || !["video/mp4", "video/quicktime"].includes(file.type)) {
+      setUploadError(true); setGenerationMessage("Choose a valid MP4 or MOV video."); return
+    }
+    if (file.size > 200 * 1024 * 1024) {
+      setUploadError(true); setGenerationMessage("Video must be 200 MB or smaller."); return
+    }
+    const url = URL.createObjectURL(file)
+    setSelectedUpload(file); setSelectedUploadUrl(url); setUploadError(false); setUploadState("preview")
+  }
+  const saveUploadedAttempt = async () => {
+    if (!uploadPrivacy || !selectedUpload || !session) return
     setUploadError(false); setUploadState("loading")
-    const routeId = selectedRoute.id, privacy = uploadPrivacy, id = crypto.randomUUID(), failure = uploadError ? "none" : demoFailure
-    window.setTimeout(() => {
-      if (failure === "upload") {setUploadError(true);setUploadState("preview");return}
-      setUploadState("saved");setHasAttempt(true);setWorkspaceEntry("attempt");setActiveAttemptId(id)
+    try {
+      const form = new FormData(); form.append("route_id", selectedRoute.id); form.append("visibility", uploadPrivacy.toLowerCase()); form.append("share_as_beta", String(uploadPrivacy === "Public" && shareAsBeta)); form.append("title", uploadTitle); form.append("description", uploadDescription); form.append("video", selectedUpload)
+      const response = await fetch("/api/videos", {method:"POST",credentials:"same-origin",headers:{"X-CSRF-Token":session.csrf_token},body:form})
+      const data = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(data?.error?.message ?? "Video upload failed")
+      const id = data.id as string
+      setUploadState("saved"); setHasAttempt(true); setWorkspaceEntry("attempt"); setActiveAttemptId(id)
       setWorkspaceSource(`Today · ${selectedRoute.name}`)
-      setAttemptRecords(records => [{id,routeId,date:"Today",duration:routeId === "r1" ? "0:32" : "0:16",status:privacy},...records])
-      setAttempts(items => items.includes(routeId) ? items : [...items,routeId])
-      setJobs(j => ({...j,[id]:"Video saved"}))
-      window.setTimeout(() => analyze(id, failure === "analysis"), 900)
-      flash("Video saved. You can leave while analysis runs.")
-    }, 1400)
+      setAttemptRecords(records => [{id,routeId:selectedRoute.id,date:"Today",duration:`${Math.floor(data.duration_seconds/60)}:${String(Math.floor(data.duration_seconds%60)).padStart(2,"0")}`,status:uploadPrivacy,contentUrl:data.content_url},...records])
+      setPublicVideos(videos => uploadPrivacy.toLowerCase() === "public" ? [{...data,username:session.user.username,display_name:session.user.display_name},...videos] : videos)
+      if (uploadPrivacy === "Public" && shareAsBeta) setRouteBetaVideos(videos => [{...data,username:session.user.username,display_name:session.user.display_name},...videos])
+      setMyVideos(videos => [data,...videos])
+      setAttempts(items => items.includes(selectedRoute.id) ? items : [...items,selectedRoute.id])
+      setJobs(j => ({...j,[id]:"Video saved"})); flash("Video saved successfully.")
+    } catch (error) { setUploadError(true); setGenerationMessage(error instanceof Error ? error.message : "Video upload failed"); setUploadState("preview") }
   }
 
   const showOthersBeta = betaVisible || !hasAttempt || (!!jobs[activeAttemptId] && jobs[activeAttemptId] !== "Ready")
+  const communityBetaVideo = routeBetaVideos.find(video => video.id === activeAttemptId)
+  const isOwnUploadedVideo = myVideos.some(video => video.id === activeAttemptId)
+  const isPresetSample = !isOwnUploadedVideo && !communityBetaVideo
   const workspaceScreen = (
     <main className="screen with-header workspace workspace-flow">
       <header className="workspace-video-header">
         <div className="workspace-title-row">
           <h1>{selectedGym} <span className="workspace-title-grade">{selectedRoute.grade}</span></h1>
-          {hasAttempt && <button type="button" className="workspace-more" aria-label="Manage my video" onClick={() => setManageMode(manageMode ? null : "menu")}>⋯</button>}
+          {hasAttempt && isOwnUploadedVideo && <button type="button" className="workspace-more" aria-label="Manage my video" onClick={() => setManageMode(manageMode ? null : "menu")}>⋯</button>}
         </div>
-        <div className="workspace-info-line">{hasAttempt && <p className="workspace-attempt-date">My attempt <span aria-hidden="true">·</span> {activeAttempt?.date ?? workspaceSource.split(" · ")[0]}</p>}{hasAttempt && activeAttempt && <span className="video-status-inline" role="status"><span>{activeAttempt.status.split(" · ")[0]}</span>{(!jobs[activeAttemptId] || jobs[activeAttemptId] === "Ready") && <><span className="status-divider" aria-hidden="true">·</span><span className="video-ready"><i aria-hidden="true" />Ready</span></>}</span>}</div>
+        <div className="workspace-info-line">{hasAttempt && <p className="workspace-attempt-date">My attempt <span aria-hidden="true">·</span> {activeAttempt?.date ?? workspaceSource.split(" · ")[0]}</p>}{hasAttempt && activeAttempt && <span className="video-status-inline" role="status"><span>{isPresetSample ? "Preset sample" : activeAttempt.status.split(" · ")[0]}</span>{(!jobs[activeAttemptId] || jobs[activeAttemptId] === "Ready") && <><span className="status-divider" aria-hidden="true">·</span><span className="video-ready"><i aria-hidden="true" />Ready</span></>}</span>}</div>
       </header>
+      {hasAttempt && isPresetSample && <p className="sample-video-note">This is a preset sample. Upload your own video to change visibility or share it with the community.</p>}
+      {workspaceEntry === "attempt" && communityBetaVideo?.description && <p className="community-beta-description">{communityBetaVideo.description}</p>}
 
       {hasAttempt && activeAttempt && <>
         {manageMode && <section className="video-management">
           {manageMode === "menu" && <><button className="btn btn-outline" onClick={() => setManageMode("visibility")}>Change visibility</button><button className="btn btn-outline" onClick={() => setManageMode("delete")}>Delete video</button></>}
-          {manageMode === "visibility" && <><p>Who can see this video?</p><div className="privacy-options">{["Private","Public"].map(option => <button key={option} className={activeAttempt.status.startsWith(option) ? "selected" : ""} aria-pressed={activeAttempt.status.startsWith(option)} onClick={() => {setAttemptRecords(records => records.map(r => r.id === activeAttemptId ? {...r,status:option}:r));flash(`Visibility changed to ${option}`)}}>{option}</button>)}</div><button className="btn btn-text" onClick={() => setManageMode(null)}>Done</button></>}
+          {manageMode === "visibility" && <>
+            <p>Who can see this video?</p>
+            <div className="privacy-options">{["Private","Public"].map(option => <button key={option} className={activeAttempt.status.startsWith(option) ? "selected" : ""} aria-pressed={activeAttempt.status.startsWith(option)} onClick={async () => {
+              if (!session || !activeAttempt.contentUrl) { setAttemptRecords(records => records.map(r => r.id === activeAttemptId ? {...r,status:option}:r)); flash(`Visibility changed to ${option}`); return }
+              try {
+                const response=await fetch(`/api/videos/${activeAttemptId}`,{method:"PATCH",credentials:"same-origin",headers:{"Content-Type":"application/json","X-CSRF-Token":session.csrf_token},body:JSON.stringify({visibility:option.toLowerCase(),share_as_beta:option==="Public" && !!myVideos.find(v=>v.id===activeAttemptId)?.share_as_beta})})
+                const result=await response.json().catch(()=>null);if(!response.ok)throw new Error(result?.error?.message??"Could not update video visibility")
+                setAttemptRecords(records=>records.map(r=>r.id===activeAttemptId?{...r,status:option}:r));setMyVideos(videos=>videos.map(v=>v.id===activeAttemptId?result:v));setPublicVideos(videos=>option==="Public"?[result,...videos.filter(v=>v.id!==activeAttemptId)]:videos.filter(v=>v.id!==activeAttemptId));setRouteBetaVideos(videos=>option==="Public"?videos:videos.filter(v=>v.id!==activeAttemptId));flash(`Visibility changed to ${option}`)
+              } catch(error) { flash(error instanceof Error?error.message:"Could not update video") }
+            }}>{option}</button>)}</div>
+            {activeAttempt.status.startsWith("Public") && <label className="share-beta-choice"><input type="checkbox" checked={!!myVideos.find(video=>video.id===activeAttemptId)?.share_as_beta} onChange={async event=>{
+              if(!session)return
+              const share=event.target.checked
+              try {
+                const response=await fetch(`/api/videos/${activeAttemptId}`,{method:"PATCH",credentials:"same-origin",headers:{"Content-Type":"application/json","X-CSRF-Token":session.csrf_token},body:JSON.stringify({visibility:"public",share_as_beta:share})})
+                const result=await response.json().catch(()=>null);if(!response.ok)throw new Error(result?.error?.message??"Could not update beta sharing")
+                const updated={...result,height_cm:share?session.user.height_cm:null,arm_span_cm:share?session.user.arm_span_cm:null}
+                setMyVideos(videos=>videos.map(v=>v.id===activeAttemptId?updated:v));setPublicVideos(videos=>videos.map(v=>v.id===activeAttemptId?updated:v));setRouteBetaVideos(videos=>share?[updated,...videos.filter(v=>v.id!==activeAttemptId)]:videos.filter(v=>v.id!==activeAttemptId));flash(share?"Added to Community Beta":"Removed from Community Beta")
+              }catch(error){flash(error instanceof Error?error.message:"Could not update beta sharing")}
+            }}/><span><strong>Share as beta</strong><small>Also show this public video in Community Beta for this route.</small></span></label>}
+            <button className="btn btn-text" onClick={() => setManageMode(null)}>Done</button>
+          </>}
           {manageMode === "delete" && <><strong>Delete this video?</strong><p>This removes this attempt and its comments. Other attempts remain.</p><button className="btn btn-outline" onClick={() => setManageMode(null)}>Cancel</button><button className="btn btn-solid" onClick={() => {const remaining = attemptRecords.filter(r => r.id !== activeAttemptId);setAttemptRecords(remaining);if (!remaining.some(r => r.routeId === selectedRoute.id)) setAttempts(items => items.filter(id => id !== selectedRoute.id));setComments(c => c.filter(item => item.source !== `attempt:${activeAttemptId}`));setManageMode(null);setHasAttempt(false);setJobs(j => {const next={...j};delete next[activeAttemptId];return next});go("route")}}>Delete video</button></>}
         </section>}
         {jobs[activeAttemptId] && jobs[activeAttemptId] !== "Ready" && <div className="process-status" role="status"><strong>{jobs[activeAttemptId]}</strong>{["Analyzing","Video saved"].includes(jobs[activeAttemptId]) && <p>Your video is saved. You can leave and return through My Library.</p>}{jobs[activeAttemptId] === "Analysis failed" && <><p>Your video is saved. Only the analysis failed.</p><button className="btn btn-outline" onClick={() => analyze(activeAttemptId)}>Retry analysis</button></>}</div>}
@@ -1063,7 +1236,7 @@ function App() {
         {!(workspaceEntry === "upload" && !hasAttempt) && (
           <>
             <div className="video-frame">
-              <MediaVideo routeId={selectedRoute.id} seekTime={cueTime} />
+              <MediaVideo routeId={selectedRoute.id} sourceUrl={activeAttempt?.contentUrl} seekTime={cueTime} />
             </div>
             <div className="player-controls">
               <PlaybackButton />
@@ -1097,7 +1270,8 @@ function App() {
             {uploadState === "empty" && (
               <>
                 <p className="upload-intro">Choose a climbing video to review.</p>
-                <AppButton onClick={() => setUploadState("preview")}>
+                <input ref={uploadInputRef} type="file" accept="video/mp4,video/quicktime,.mp4,.mov" hidden onChange={event => chooseUpload(event.target.files?.[0])} />
+                <AppButton onClick={() => uploadInputRef.current?.click()}>
                   Upload from device
                 </AppButton>
                 <AppButton
@@ -1113,19 +1287,23 @@ function App() {
             )}
             {uploadState === "preview" && (
               <>
-                <MediaVideo routeId={selectedRoute.id} />
-                {uploadError && <p role="alert">Upload failed. Your selection is preserved. Try again.</p>}
+                {selectedUploadUrl && <video className="real-media-video" src={selectedUploadUrl} controls playsInline />}
+                {selectedUpload && <p>{selectedUpload.name} · {(selectedUpload.size/1024/1024).toFixed(1)} MB</p>}
+                {uploadError && <p role="alert">{generationMessage || "Upload failed. Your selection is preserved. Try again."}</p>}
+                <label className="field"><span>Title</span><input maxLength={120} value={uploadTitle} onChange={event => setUploadTitle(event.target.value)} placeholder={selectedUpload?.name.replace(/\.[^.]+$/, "") || "My climbing attempt"} /></label>
+                <label className="field"><span>Description (optional)</span><textarea maxLength={500} rows={3} value={uploadDescription} onChange={event => setUploadDescription(event.target.value)} placeholder="Add a note about this attempt" /></label>
                 <fieldset className="upload-privacy">
                   <legend>Visibility</legend>
                   <div className="privacy-options">
                     {(["Private", "Public"] as const).map(option => (
                       <label key={option} className={uploadPrivacy === option ? "selected" : ""}>
-                        <input type="radio" name="video-privacy" value={option} checked={uploadPrivacy === option} onChange={() => setUploadPrivacy(option)} />
+                        <input type="radio" name="video-privacy" value={option} checked={uploadPrivacy === option} onChange={() => {setUploadPrivacy(option); if (option === "Private") setShareAsBeta(false)}} />
                         <span>{option}</span>
                       </label>
                     ))}
                   </div>
                   {uploadPrivacy && <p>{uploadPrivacy === "Public" ? "Shared with the community." : "Only you can view it."}</p>}
+                  {uploadPrivacy === "Public" && <label className="share-beta-choice"><input type="checkbox" checked={shareAsBeta} onChange={event => setShareAsBeta(event.target.checked)} /><span><strong>Share as beta</strong><small>Also show this video in Community Beta for {selectedGym} · {selectedRoute.grade}.</small></span></label>}
                 </fieldset>
                 <div className="inline-buttons">
                   <AppButton
@@ -1134,9 +1312,9 @@ function App() {
                   >
                     Cancel
                   </AppButton>
-                  <button className="btn btn-solid" type="button" disabled={!uploadPrivacy} onClick={saveUploadedAttempt}>{uploadError ? "Retry upload" : "Save video"}</button>
+                  <button className="btn btn-solid" type="button" disabled={!uploadPrivacy || !selectedUpload} onClick={saveUploadedAttempt}>{uploadError ? "Retry upload" : "Upload video"}</button>
                 </div>
-                <details className="demo-controls"><summary>Prototype test states</summary><select aria-label="Upload test scenario" value={demoFailure} onChange={e => setDemoFailure(e.target.value)}><option value="none">Successful upload and analysis</option><option value="upload">Upload fails</option><option value="analysis">Analysis fails after saving</option></select><p>Local prototype · nothing is published online.</p></details>
+                <p className="muted small">MP4 or MOV · up to 90 seconds · 200 MB maximum. Stored on this BetaLab server.</p>
               </>
             )}
             {uploadState === "loading" && (
@@ -1178,6 +1356,13 @@ function App() {
           )}
           {showOthersBeta && (
             <div className="beta-list-simple" id="others-panel" role="tabpanel" aria-labelledby="others-tab">
+              {routeBetaVideos.map(video => <button className="beta-video-card" type="button" key={video.id} onClick={() => {
+                setAttemptRecords(items => [{id:video.id,routeId:video.route_id,date:new Date(video.created_at).toLocaleDateString(),duration:`${Math.floor(video.duration_seconds/60)}:${String(Math.floor(video.duration_seconds%60)).padStart(2,"0")}`,status:"Public",contentUrl:video.content_url,title:video.title},...items.filter(item => item.id !== video.id)])
+                setActiveAttemptId(video.id); setHasAttempt(true); setWorkspaceEntry("attempt"); setWorkspaceSource(video.title); setBetaVisible(false); setSuggestionsVisible(false)
+              }}><span className="beta-card-thumbnail"><VideoThumbnail src={video.content_url} alt={`${video.title} first frame`} /><span className="beta-card-duration">{Math.floor(video.duration_seconds/60)}:{String(Math.floor(video.duration_seconds%60)).padStart(2,"0")}</span></span><span className="beta-card-details"><b>{video.title}</b><span className="beta-card-measurements">By {video.display_name || video.username}</span><span className="beta-card-measurements"><span>Height <strong>{video.height_cm == null ? "Not provided" : `${Math.round(video.height_cm)} cm`}</strong></span><span>Wingspan <strong>{video.arm_span_cm == null ? "Not provided" : `${Math.round(video.arm_span_cm)} cm`}</strong></span></span>{(profile.height || profile.wingspan) && <small className="beta-card-difference">{[
+                video.height_cm != null && profile.height ? `Height ${signedDifference(Math.round(video.height_cm - Number(profile.height)))} cm` : null,
+                video.arm_span_cm != null && profile.wingspan ? `Wingspan ${signedDifference(Math.round(video.arm_span_cm - Number(profile.wingspan)))} cm` : null,
+              ].filter(Boolean).join(" · ") || "Add your measurements to compare"}</small>}<span className="beta-card-open">View beta ↗</span></span></button>)}
               {[...similarClimbers].filter(climber => betaCards.some(card => card.id === climber.id && card.route === selectedRoute.name && card.gym === selectedGym)).sort((a,b) => profile.height && profile.wingspan ? (Math.abs(a.height - Number(profile.height)) + Math.abs(a.wingspan - Number(profile.wingspan))) - (Math.abs(b.height - Number(profile.height)) + Math.abs(b.wingspan - Number(profile.wingspan))) : 0).map((climber) => (
                 <button
                   className="beta-video-card"
@@ -1209,12 +1394,7 @@ function App() {
 
   const libraryItems = useMemo(() => {
     if (libraryTab === "attempts")
-      return attempts.map((id) => ({
-        id,
-        label: routes.find((route) => route.id === id)?.name ?? id,
-        meta: `${attemptRecords.filter(record => record.routeId === id).length} attempts · ${jobs[attemptRecords.find(record => record.routeId === id)?.id ?? ""] ?? "Ready"}`,
-        target: "workspace" as const,
-      }))
+      return myVideos.map(video => ({id:video.id,label:video.title,meta:`${routes.find(route => route.id === video.route_id)?.name ?? video.route_id} · ${video.visibility === "public" ? "Public" : "Private"}`,target:"video" as const,routeId:video.route_id}))
     if (libraryTab === "saved")
       return savedBeta.map((id) => ({
         id,
@@ -1228,7 +1408,7 @@ function App() {
       meta: "Want to try",
       target: "route" as const,
     }))
-  }, [attempts, attemptRecords, jobs, libraryTab, savedBeta, wantedRoutes])
+  }, [attempts, attemptRecords, jobs, libraryTab, savedBeta, wantedRoutes, myVideos])
 
   const libraryScreen = (
     <main className="screen with-header library-page">
@@ -1255,17 +1435,36 @@ function App() {
           Want to Try
         </button>
       </div>
-      {libraryTab === "attempts" && <section className="library-history">
-        <button type="button" className="history-toggle" aria-expanded={historyVisible} onClick={() => setHistoryVisible(!historyVisible)}><span>Attempt history <small>{attemptRecords.length}</small></span><span className="history-chevron" aria-hidden="true">{historyVisible ? "⌃" : "⌄"}</span></button>
-        {historyVisible && <><div className="history-entries">{attemptRecords.map(record => {
-          const route = routes.find(route => route.id === record.routeId)
-          return <button key={record.id} type="button" className="history-row" onClick={() => {setSelectedRoute(route ?? routes[0]); setSelectedGym(route?.gym ?? "Gym A"); openWorkspace(`${record.date} · Attempt`, "attempt", record.id)}}>
-            <span className="history-thumbnail"><MediaImage routeId={record.routeId}/><span>{record.duration}</span></span>
-            <span className="history-entry-info"><span className="history-entry-title"><strong>{route?.gym}</strong><span className="history-grade">{route?.grade}</span></span><span className="history-date">{record.date}</span><span className="history-status">{record.status} · {jobs[record.id] ?? "Ready"}</span></span>
-            <span className="history-entry-arrow" aria-hidden="true">›</span>
-          </button>
-        })}</div></>}
-
+      {libraryTab === "attempts" && <section className="library-history gym-attempt-groups">
+        {catalogGyms.filter(gym => [...myVideos.map(video => video.route_id),...attemptRecords.filter(record => record.id.startsWith("a")).map(record => record.routeId)].some(routeId => catalogRoutes.find(route => route.id === routeId)?.gym === gym.name)).map(gym => {
+          const gymRoutes = catalogRoutes.filter(route => route.gym === gym.name && ([...myVideos.map(video => video.route_id),...attemptRecords.filter(record => record.id.startsWith("a")).map(record => record.routeId)].includes(route.id)))
+          const gymVideoCount = gymRoutes.reduce((count, route) => count + myVideos.filter(video => video.route_id === route.id).length + attemptRecords.filter(record => record.id.startsWith("a") && record.routeId === route.id).length, 0)
+          return <details className="attempt-gym-group" key={gym.name}>
+            <summary><span>{gym.name}</span><small>{gymVideoCount} {gymVideoCount === 1 ? "video" : "videos"}</small></summary>
+            {gymRoutes.map(route => {
+              const videos = myVideos.filter(video => video.route_id === route.id)
+              const presets = attemptRecords.filter(record => record.id.startsWith("a") && record.routeId === route.id)
+              return <details className="attempt-route-group" key={route.id}>
+                <summary><span>{route.name} <small>{route.grade}</small></span><small>{videos.length + presets.length} {(videos.length + presets.length) === 1 ? "attempt" : "attempts"}</small></summary>
+                {presets.map(video => <button className="history-row" type="button" key={video.id} onClick={() => {
+                  setSelectedRoute(route); setSelectedGym(route.gym); setActiveAttemptId(video.id); setHasAttempt(true); setWorkspaceEntry("attempt"); setWorkspaceSource(video.title ?? `Attempt ${video.id.slice(1)}`); go("workspace")
+                }}>
+                  <span className="history-thumbnail"><VideoThumbnail src={routeMedia(route.id).video} alt={`${video.title ?? "Sample attempt"} first frame`} /><span>{video.duration}</span></span>
+                  <span className="history-entry-info"><strong>{video.title ?? `Attempt ${video.id.slice(1)}`}</strong><span className="history-date">{video.date}</span><span className="history-status">Sample · {video.status}</span></span>
+                  <span className="history-entry-arrow" aria-hidden="true">›</span>
+                </button>)}
+                {videos.map(video => <button className="history-row" type="button" key={video.id} onClick={() => {
+                  setSelectedRoute(route); setSelectedGym(route.gym); setActiveAttemptId(video.id); setHasAttempt(true); setWorkspaceEntry("attempt"); setWorkspaceSource(video.title); go("workspace")
+                }}>
+                  <span className="history-thumbnail"><VideoThumbnail src={video.content_url} alt={`${video.title} first frame`} /><span>{Math.floor(video.duration_seconds / 60)}:{String(Math.floor(video.duration_seconds % 60)).padStart(2, "0")}</span></span>
+                  <span className="history-entry-info"><strong>{video.title}</strong><span className="history-date">{new Date(video.created_at).toLocaleDateString()}</span><span className="history-status">{video.visibility === "public" ? "Public" : "Private"}{video.description ? ` · ${video.description}` : ""}</span></span>
+                  <span className="history-entry-arrow" aria-hidden="true">›</span>
+                </button>)}
+              </details>
+            })}
+          </details>
+        })}
+        {myVideos.length === 0 && <div className="library-empty"><strong>No attempts yet</strong><p>Upload a video from a route to see it here.</p></div>}
       </section>}
       {libraryTab !== "attempts" && <div className="library-list">
         {libraryItems.map((item) => (
@@ -1275,6 +1474,12 @@ function App() {
             onClick={() => {
               if (item.target === "route") {
                 openRoute(routes.find((route) => route.id === item.id))
+              } else if (item.target === "video") {
+                const video = myVideos.find(entry => entry.id === item.id)
+                const route = catalogRoutes.find(entry => entry.id === item.routeId) ?? catalogRoutes[0]
+                if (video && route) {
+                  setSelectedRoute(route); setSelectedGym(route.gym); setActiveAttemptId(video.id); setHasAttempt(true); setWorkspaceEntry("attempt"); setWorkspaceSource(video.title); go("workspace")
+                }
               } else if (item.meta === "Saved community beta") {
                 const savedCard = betaCards.find(card => card.id === item.id); const savedRoute = routes.find(route => route.name === savedCard?.route) ?? routes[0]; setSelectedRoute(savedRoute); setSelectedGym(savedRoute.gym)
                 setWorkspaceBetaId(item.id)
@@ -1323,6 +1528,7 @@ function App() {
     account: accountScreen,
     profile: profileScreen,
     community: communityScreen,
+    communityVideo: communityVideoScreen,
     gyms: gymsScreen,
     gallery: galleryScreen,
     route: routeScreen,
@@ -1334,16 +1540,33 @@ function App() {
   return (
     <div className="prototype-shell">
       <div className="phone">
-        <div className="phone-content">
+        <div className="phone-content" onPointerDown={event=>{
+          if (event.isPrimary && (event.pointerType !== "mouse" || event.button === 0)) globalSwipeStart.current={x:event.clientX,y:event.clientY,pointerId:event.pointerId}
+        }} onPointerUp={event=>{
+          const start=globalSwipeStart.current
+          if (!start || start.pointerId !== event.pointerId) return
+          globalSwipeStart.current=null
+          const dx=event.clientX-start.x,dy=event.clientY-start.y
+          if (dx < -84 && Math.abs(dx) > Math.abs(dy)*1.35 && history.length>0) { event.preventDefault(); back() }
+        }} onPointerCancel={()=>{globalSwipeStart.current=null}}>
         {header}
-        {notice && (
+      {notice && (
           <div className="toast" role="status">
             {notice}
           </div>
         )}
-        {screens[screen]}
+        {!signedIn && !authLoading && <>
+          <header className="topbar auth-topbar"><span className="header-spacer" aria-hidden="true" /><strong>BetaLab</strong><span className="header-spacer" aria-hidden="true" /></header>
+          {accountScreen}
+        </>}
+        {(authLoading || (signedIn && authError) || (signedIn && ["gyms", "gallery"].includes(screen) && (catalogLoading || catalogError))) && <div className="process-status" role="status">
+          {authLoading ? "Restoring session…" : authError || (catalogLoading ? "Loading gyms and routes…" : catalogError)}
+          {!authLoading && authError && <button type="button" onClick={() => signedIn ? void loadCatalog() : void refreshSession()}>Retry connection</button>}
+          {catalogError && <button type="button" onClick={() => void loadCatalog()}>Retry loading</button>}
+        </div>}
+        {signedIn && screens[screen]}
         </div>
-        {screen !== "home" && <nav className="bottom-nav" aria-label="Main navigation">
+        {signedIn && screen !== "home" && screen !== "communityVideo" && <nav className="bottom-nav" aria-label="Main navigation">
           {([
             {id:"home", label:"Home", path:"M3 10 12 3l9 7v11h-6v-7H9v7H3Z"},
             {id:"community", label:"Community", path:"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M17 4a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-4"},
@@ -1424,12 +1647,6 @@ function App() {
                 This helps prioritize beta from climbers with similar
                 measurements. It stays private by default.
               </p>
-              <Field
-                label="Name — optional"
-                value={profile.name}
-                onChange={(name) => setProfile({ ...profile, name })}
-                placeholder="Name"
-              />
               <div className="field-row">
                 <Field
                   label="Height (cm)"
@@ -1445,20 +1662,21 @@ function App() {
                 />
               </div>
               <AppButton
-                onClick={() => {
+                disabled={authBusy}
+                onClick={async () => {
+                  if (!(await saveProfile())) return
                   setMeasurementPrompt(false)
-                  if (screen === "account") back()
-                  if (screen === "beta") setConfirmBody(true)
-                  flash("Profile information saved")
+                  setScreen("home"); setHistory([])
+                  flash("Profile saved")
                 }}
               >
-                Save profile information
+                Save and continue
               </AppButton>
               <AppButton
                 variant="outline"
                 onClick={() => {
                   setMeasurementPrompt(false)
-                  if (screen === "account") back()
+                  setScreen("home"); setHistory([])
                   flash("Skipped — you can add this later in Profile")
                 }}
               >
