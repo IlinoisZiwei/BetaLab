@@ -2947,7 +2947,7 @@ button:disabled { opacity:.4; cursor:not-allowed; }
 .phone .compact-suggestions .suggestion-card + .suggestion-card { border-top:1px solid var(--glass-border); background:transparent; }
 .phone .compact-suggestions .suggestion-card p { margin:5px 0 0; font-size:13px; line-height:1.5; }
 .phone .compact-suggestions .suggestion-card > b { font-size:12px; color:#61788b; font-weight:500; }
-.phone .compact-suggestions .cue-link { padding:0 0 4px; font-size:12px; color:#416d99; text-decoration:none; font-weight:600; }
+.phone .compact-suggestions .cue-link { padding:0 0 4px; font-size:12px; color:#416d99; text-decoration:underline; font-weight:600; }
 .phone .compact-suggestions .technical-term { font-size:13px; }
 
 /* Compact upload composer, retaining explicit privacy selection. */

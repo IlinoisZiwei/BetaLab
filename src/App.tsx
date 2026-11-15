@@ -332,6 +332,10 @@ function App() {
   const [uploadPrivacy, setUploadPrivacy] = useState<"Private" | "Public" | null>(null)
   const [historyVisible, setHistoryVisible] = useState(false)
   const [cueTime, setCueTime] = useState(7)
+  const jumpToCueTime = (time: number) => {
+    const safeTime = Math.min(18, Math.max(0, Number.isFinite(time) ? time : 0))
+    setCueTime(safeTime)
+  }
   const [, setSuggestionsVisible] = useState(false)
   const [betaVisible, setBetaVisible] = useState(false)
   const [activeTerm, setActiveTerm] = useState<string | null>(null)
@@ -905,6 +909,26 @@ function App() {
     similarClimbers.find((climber) => climber.id === workspaceBetaId) ??
     similarClimbers[0]
 
+  const suggestions = [
+    {
+      id: "drop-knee-reach",
+      time: 7,
+      label: "View moment · 00:07",
+      observed: "Hips move away from the wall during the reach.",
+      advice: "Drop knee",
+      term: "drop knee",
+      why: "Turning the hip inward may reduce the reach distance.",
+    },
+    {
+      id: "insufficient-evidence",
+      time: 12,
+      label: "View moment · 00:12",
+      observed: "The foot is obscured in this section.",
+      advice: null,
+      why: "No foot-placement suggestion is available for this section.",
+    },
+  ] as const
+
   const betaDetailScreen = (
     <main className="screen with-header beta-detail-page">
       <header className="beta-video-info">
@@ -922,13 +946,6 @@ function App() {
         <section className="beta-detail-video">
           <div className="video-frame">
             <MediaVideo routeId={selectedRoute.id} />
-            <button
-              className="expand-video"
-              type="button"
-              onClick={() => setExpandedVideo(`${selectedBeta.name} video`)}
-            >
-              Expand
-            </button>
           </div>
           <div className="player-controls">
             <PlaybackButton />
@@ -1047,19 +1064,6 @@ function App() {
           <>
             <div className="video-frame">
               <MediaVideo routeId={selectedRoute.id} seekTime={cueTime} />
-              <button
-                className="expand-video"
-                type="button"
-                onClick={() =>
-                  setExpandedVideo(
-                    workspaceEntry === "community"
-                      ? `${selectedBeta.name} video`
-                      : "My video",
-                  )
-                }
-              >
-                Expand
-              </button>
             </div>
             <div className="player-controls">
               <PlaybackButton />
@@ -1068,9 +1072,10 @@ function App() {
                 type="range"
                 min="0"
                 max="18"
-                value={cueTime} onChange={event => setCueTime(Number(event.target.value))}
+                value={cueTime}
+                onChange={event => jumpToCueTime(Number(event.target.value))}
               />
-              <span>00:{String(cueTime).padStart(2, "0")} / 00:18</span>
+              <span>00:{String(Math.floor(cueTime)).padStart(2, "0")} / 00:18</span>
             </div>
           </>
         )}
@@ -1151,8 +1156,24 @@ function App() {
           </div>
           {!showOthersBeta && hasAttempt && (!jobs[activeAttemptId] || jobs[activeAttemptId] === "Ready") && (
             <div className="suggestion-text compact-suggestions" id="suggestions-panel" role="tabpanel" aria-labelledby="suggestions-tab">
-              <article className="suggestion-card"><button className="cue-link" onClick={() => setCueTime(7)}>View moment · 00:07</button><p><b>Observed:</b> Hips move away from the wall during the reach.</p><p><b>Try:</b> <button className="technical-term" onClick={() => setActiveTerm("drop knee")}>Drop knee</button></p><p><b>Why:</b> Turning the hip inward may reduce the reach distance.</p></article>
-              <article className="suggestion-card"><b>Insufficient evidence · example</b><p>The foot is obscured. No foot-placement suggestion is available for this section.</p></article>
+              {suggestions.map((suggestion) => (
+                <article className="suggestion-card" key={suggestion.id}>
+                  <button className="cue-link" type="button" onClick={() => jumpToCueTime(suggestion.time)}>
+                    {suggestion.label}
+                  </button>
+                  <p><b>Observed:</b> {suggestion.observed}</p>
+                  {suggestion.advice && (
+                    <p>
+                      <b>Try:</b>{" "}
+                      <button className="technical-term" type="button" onClick={() => setActiveTerm(suggestion.term)}>
+                        {suggestion.advice}
+                      </button>
+                    </p>
+                  )}
+                  {!suggestion.advice && <p><b>Insufficient evidence · example</b></p>}
+                  <p><b>Why:</b> {suggestion.why}</p>
+                </article>
+              ))}
             </div>
           )}
           {showOthersBeta && (
@@ -1372,7 +1393,7 @@ function App() {
                   Close
                 </AppButton>
               </div>
-              <MediaVideo routeId={selectedRoute.id} pose={expandedVideo.includes("Generated")} />
+              <MediaVideo routeId={selectedRoute.id} pose={expandedVideo.includes("Generated")} seekTime={cueTime} />
               <div className="player-controls">
                 <PlaybackButton />
                 <input
@@ -1380,9 +1401,10 @@ function App() {
                   type="range"
                   min="0"
                   max="18"
-                  defaultValue="7"
+                  value={cueTime}
+                  onChange={event => jumpToCueTime(Number(event.target.value))}
                 />
-                <span>00:07 / 00:18</span>
+                <span>00:{String(Math.floor(cueTime)).padStart(2, "0")} / 00:18</span>
               </div>
             </section>
           </div>
