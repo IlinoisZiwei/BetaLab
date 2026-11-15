@@ -60,7 +60,7 @@
 - 数据库初始目录包含 Gym A、Gym B，以及前端已有的 r1 Corner Study、r2 Long Reach、r3 Old Slab；r3 为归档路线。示例媒体记录与 `public/media` 中现有素材对应，示例媒体与用户上传分开。
 - 已实现第一批 API：注册、登录、退出、Cookie 会话、个人资料、gym 和 route 查询。前端已接入账号、资料与场馆路线；未登录强制进入登录／注册页。
 - 用户视频上传、媒体权限 API、评论持久化、任务队列和通知仍待后续实现；当前已有界面中的演示行为不能当作这些功能已完成。
-- 任务细分和验收项见 [两周 Demo 实施计划](DEMO_IMPLEMENTATION_PLAN.md)；账号 API 页面手工验证方式见 [第一批 API 验证说明](ACCOUNT_API_VERIFICATION.md)。
+- 任务细分和验收项见 [两周 Demo 实施计划](DEMO_IMPLEMENTATION_PLAN.md)；本地启动与 API 说明见 [backend/README.md](../backend/README.md) 和 [backend/API.md](../backend/API.md)。
 
 ### 后续正式上线的迁移方向
 
