@@ -250,8 +250,10 @@ async def upload_video(request: Request, route_id: str = Form(...), visibility: 
     if not video.filename or Path(video.filename).suffix.lower() not in ('.mp4', '.mov'):
         raise HTTPException(415, 'Choose an MP4 or MOV video')
     media_type = video.content_type
+    if media_type in ('', 'application/octet-stream'):
+        media_type = 'video/quicktime' if Path(video.filename).suffix.lower() == '.mov' else 'video/mp4'
     if media_type not in UPLOAD_TYPES:
-        raise HTTPException(415, 'The browser must identify this file as MP4 or MOV')
+        raise HTTPException(415, 'Choose an MP4 or MOV video')
     with database() as db:
         if not db.execute('SELECT 1 FROM routes WHERE id=%s', (route_id,)).fetchone():
             raise HTTPException(404, 'Route not found')
@@ -273,7 +275,7 @@ async def upload_video(request: Request, route_id: str = Form(...), visibility: 
             raise HTTPException(422, 'The selected file is empty')
         try:
             probe = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0',
-                                    '-show_entries', 'stream=codec_type:format=duration', '-of', 'json', str(temp_path)],
+                                    '-show_entries', 'stream=codec_type,codec_name:format=duration', '-of', 'json', str(temp_path)],
                                    capture_output=True, text=True, timeout=15, check=True)
             import json
             metadata = json.loads(probe.stdout)
@@ -283,6 +285,8 @@ async def upload_video(request: Request, route_id: str = Form(...), visibility: 
                 raise ValueError('No video stream')
         except (FileNotFoundError, subprocess.SubprocessError, ValueError, KeyError, TypeError):
             raise HTTPException(422, 'Could not verify this video. Install ffprobe and choose a valid MP4 or MOV.')
+        if streams[0].get('codec_name') not in ('h264', 'hevc', 'av1', 'vp9'):
+            raise HTTPException(415, 'Unsupported video encoding. Export as an H.264 MP4 and try again.')
         if duration <= 0 or duration > MAX_VIDEO_SECONDS:
             raise HTTPException(422, 'Video must be 90 seconds or shorter')
         with temp_path.open('rb') as source:

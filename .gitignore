@@ -14,3 +14,6 @@ data/uploads/
 local-server/benchmarks/
 
 local-server/prepared/
+
+# Personal follow-up notes; never publish
+docs/YIRU_LOCAL_TODO.md
