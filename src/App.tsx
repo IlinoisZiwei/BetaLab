@@ -410,6 +410,7 @@ function App() {
   const activeVideo = [...myVideos, ...publicVideos, ...routeBetaVideos].find(video => video.id === activeAttemptId)
   const activeAttempt = activeVideo ? {id:activeVideo.id,routeId:activeVideo.route_id,title:activeVideo.title,contentUrl:activeVideo.content_url,status:activeVideo.visibility === "public" ? "Public" : "Private",date:new Date(activeVideo.created_at).toLocaleDateString(),duration:String(activeVideo.duration_seconds)} : attemptRecords.find(record => record.id === activeAttemptId)
   const videoMutationBusy = useRef(false)
+  const [uploadProgress,setUploadProgress]=useState(0)
   const uploadBusy = useRef(false)
   const uploadController = useRef<AbortController | null>(null)
   const authEpoch = useRef(0)
@@ -532,6 +533,30 @@ function App() {
     setScreen(previous)
     setNotice("")
   }
+
+  useEffect(()=>{
+    const element=document.querySelector(".phone-content")
+    if(!element)return
+    let start:{x:number;y:number}|null=null
+    const begin=(event:TouchEvent)=>{
+      if((event.target as Element).closest('input,textarea,select,[role="slider"]'))return
+      const touch=event.touches[0];start={x:touch.clientX,y:touch.clientY}
+    }
+    const move=(event:TouchEvent)=>{
+      if(!start)return
+      const touch=event.touches[0],dx=touch.clientX-start.x,dy=touch.clientY-start.y
+      if(dx < -12 && Math.abs(dx)>Math.abs(dy)*1.5 && history.length && event.cancelable)event.preventDefault()
+    }
+    const end=(event:TouchEvent)=>{
+      if(!start)return
+      const touch=event.changedTouches[0],dx=touch.clientX-start.x,dy=touch.clientY-start.y;start=null
+      if(dx < -55 && Math.abs(dx)>Math.abs(dy)*1.5 && history.length)back()
+    }
+    element.addEventListener("touchstart",begin as EventListener,{passive:true})
+    element.addEventListener("touchmove",move as EventListener,{passive:false})
+    element.addEventListener("touchend",end as EventListener)
+    return()=>{element.removeEventListener("touchstart",begin as EventListener);element.removeEventListener("touchmove",move as EventListener);element.removeEventListener("touchend",end as EventListener)}
+  },[history,screen])
 
   const openRoute = (route = routes[0]) => {
     setSelectedRoute(route)
@@ -1179,12 +1204,20 @@ function App() {
   const saveUploadedAttempt = async () => {
     if (!uploadPrivacy || !selectedUpload || !session || uploadBusy.current) return
     uploadBusy.current=true; const epoch=authEpoch.current; const controller=new AbortController();uploadController.current=controller
-    setUploadError(false); setUploadState("loading")
+    setUploadError(false); setUploadState("loading");setUploadProgress(0)
     try {
       const form = new FormData(); form.append("route_id", selectedRoute.id); form.append("visibility", uploadPrivacy.toLowerCase()); form.append("share_as_beta", String(uploadPrivacy === "Public" && shareAsBeta)); form.append("title", uploadTitle); form.append("description", uploadDescription); form.append("video", selectedUpload)
-      const response = await fetch("/api/videos", {method:"POST",credentials:"same-origin",headers:{"X-CSRF-Token":session.csrf_token},body:form,signal:controller.signal})
-      const data = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(data?.error?.message ?? "Video upload failed")
+      const data = await new Promise<UserVideo>((resolve,reject)=>{
+        const request=new XMLHttpRequest()
+        request.open("POST","/api/videos");request.setRequestHeader("X-CSRF-Token",session.csrf_token)
+        request.upload.onprogress=event=>{if(event.lengthComputable && epoch===authEpoch.current)setUploadProgress(Math.round(event.loaded/event.total*100))}
+        const abort=()=>request.abort();controller.signal.addEventListener("abort",abort,{once:true})
+        const cleanup=()=>controller.signal.removeEventListener("abort",abort)
+        request.onload=()=>{cleanup();let result;try{result=JSON.parse(request.responseText)}catch{reject(new Error("Unexpected upload response. Please retry."));return}if(request.status>=200 && request.status<300)resolve(result);else reject(new Error(result?.error?.message ?? "Upload failed. Please retry."))}
+        request.onerror=()=>{cleanup();reject(new Error("Connection interrupted. Please retry the upload."))}
+        request.onabort=()=>{cleanup();reject(new DOMException("Upload cancelled","AbortError"))}
+        request.send(form)
+      })
       if(epoch!==authEpoch.current)return
       const id = data.id as string
       setUploadState("saved"); setHasAttempt(true); setWorkspaceEntry("attempt"); setActiveAttemptId(id)
@@ -1335,7 +1368,7 @@ function App() {
             )}
             {uploadState === "loading" && (
               <p>
-                <strong>Uploading…</strong> Please keep this page open. <button type="button" onClick={()=>uploadController.current?.abort()}>Cancel upload</button>
+                <strong>{uploadProgress < 100 ? `Uploading ${uploadProgress}%` : "Checking video…"}</strong> {uploadProgress < 100 ? "Keep this browser tab open until transfer finishes." : "Transfer complete. The server is verifying and saving your video."} <button type="button" onClick={()=>uploadController.current?.abort()}>Cancel upload</button>
               </p>
             )}
           </div>
@@ -1557,14 +1590,17 @@ function App() {
     <div className="prototype-shell">
       <div className="phone">
         <div className="phone-content" onPointerDown={event=>{
-          if (event.isPrimary && (event.pointerType !== "mouse" || event.button === 0)) globalSwipeStart.current={x:event.clientX,y:event.clientY,pointerId:event.pointerId}
+          if(event.pointerType!=="mouse" || event.button!==0 || (event.target as HTMLElement).closest('input,textarea,select,video'))return
+          globalSwipeStart.current={x:event.clientX,y:event.clientY,pointerId:event.pointerId}
+          event.currentTarget.setPointerCapture(event.pointerId)
         }} onPointerUp={event=>{
-          const start=globalSwipeStart.current
-          if (!start || start.pointerId !== event.pointerId) return
-          globalSwipeStart.current=null
+          if(event.pointerType!=="mouse")return
+          const start=globalSwipeStart.current;globalSwipeStart.current=null
+          if(!start)return
           const dx=event.clientX-start.x,dy=event.clientY-start.y
-          if (dx < -84 && Math.abs(dx) > Math.abs(dy)*1.35 && history.length>0) { event.preventDefault(); back() }
-        }} onPointerCancel={()=>{globalSwipeStart.current=null}}>
+          if(dx < -64 && Math.abs(dx)>Math.abs(dy)*1.5 && history.length>0){event.preventDefault();back()}
+        }}>
+
         {header}
       {notice && (
           <div className="toast" role="status">
@@ -1588,7 +1624,7 @@ function App() {
             {id:"community", label:"Community", path:"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M17 4a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-4"},
             {id:"gyms", label:"Go Climbing", path:"m2 21 7-16 5 10 3-6 5 12ZM6 12l3 2 3-2"},
             {id:"library", label:"My Library", path:"M4 3h16v18l-8-5-8 5Z"}
-          ] as const).map(tab => {const active = tab.id === screen || (tab.id === "gyms" && ["gallery","route","workspace"].includes(screen)) || (tab.id === "community" && screen === "beta"); return <button key={tab.id} type="button" aria-current={active ? "page" : undefined} onClick={() => {setHistory([]);setScreen(tab.id);setNotice("");document.querySelector(".phone-content")?.scrollTo(0,0)}}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={tab.path}/></svg><span>{tab.label}</span></button>})}
+          ] as const).map(tab => {const active = tab.id === screen || (tab.id === "gyms" && ["gallery","route","workspace"].includes(screen)) || (tab.id === "community" && screen === "beta"); return <button key={tab.id} type="button" aria-current={active ? "page" : undefined} onClick={() => {if(tab.id!==screen){setHistory(items=>[...items,screen]);setScreen(tab.id);}setNotice("");document.querySelector(".phone-content")?.scrollTo(0,0)}}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={tab.path}/></svg><span>{tab.label}</span></button>})}
         </nav>}
         {activeTerm && (
           <div className="term-sheet-backdrop" role="presentation">
