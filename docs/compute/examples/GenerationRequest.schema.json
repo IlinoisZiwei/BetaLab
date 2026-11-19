@@ -1,0 +1,102 @@
+{
+  "$defs": {
+    "Body": {
+      "additionalProperties": false,
+      "properties": {
+        "height_cm": {
+          "maximum": 230,
+          "minimum": 100,
+          "title": "Height Cm",
+          "type": "number"
+        },
+        "arm_span_cm": {
+          "maximum": 260,
+          "minimum": 80,
+          "title": "Arm Span Cm",
+          "type": "number"
+        },
+        "provenance": {
+          "enum": [
+            "user_input",
+            "manual_correction",
+            "estimated"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        }
+      },
+      "required": [
+        "height_cm",
+        "arm_span_cm",
+        "provenance"
+      ],
+      "title": "Body",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "kind": {
+      "const": "generate",
+      "default": "generate",
+      "title": "Kind",
+      "type": "string"
+    },
+    "video_id": {
+      "minLength": 1,
+      "title": "Video Id",
+      "type": "string"
+    },
+    "source_analysis_id": {
+      "minLength": 1,
+      "title": "Source Analysis Id",
+      "type": "string"
+    },
+    "source_analysis_version": {
+      "minLength": 1,
+      "title": "Source Analysis Version",
+      "type": "string"
+    },
+    "target_body": {
+      "$ref": "#/$defs/Body"
+    },
+    "preserve_contact_order": {
+      "const": true,
+      "default": true,
+      "title": "Preserve Contact Order",
+      "type": "boolean"
+    },
+    "preserve_contact_timing": {
+      "const": true,
+      "default": true,
+      "title": "Preserve Contact Timing",
+      "type": "boolean"
+    },
+    "compare_techniques": {
+      "default": false,
+      "title": "Compare Techniques",
+      "type": "boolean"
+    },
+    "technique_limit": {
+      "default": 3,
+      "maximum": 3,
+      "minimum": 1,
+      "title": "Technique Limit",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "video_id",
+    "source_analysis_id",
+    "source_analysis_version",
+    "target_body"
+  ],
+  "title": "GenerationRequest",
+  "type": "object"
+}

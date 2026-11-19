@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "generate",
+  "video_id": "demo-trial2",
+  "source_analysis_id": "mock-analysis",
+  "source_analysis_version": "mock-source-v1",
+  "target_body": {
+    "height_cm": 170.0,
+    "arm_span_cm": 175.0,
+    "provenance": "user_input"
+  },
+  "preserve_contact_order": true,
+  "preserve_contact_timing": true,
+  "compare_techniques": true,
+  "technique_limit": 3
+}

@@ -1,0 +1,93 @@
+{
+  "history": [
+    {
+      "schema_version": 1,
+      "id": "mock-8116c5fdebfd4f0398a307da65384c75",
+      "owner_id": "mock-user",
+      "source_video_id": "demo-trial2",
+      "kind": "generate",
+      "state": "queued",
+      "stage": "queued",
+      "is_mock": true,
+      "attempt": 1,
+      "retry_of": null,
+      "created_at": "2026-11-19T14:31:55.952761+00:00",
+      "updated_at": "2026-11-19T14:31:55.952764+00:00",
+      "result": null,
+      "error": null
+    },
+    {
+      "schema_version": 1,
+      "id": "mock-8116c5fdebfd4f0398a307da65384c75",
+      "owner_id": "mock-user",
+      "source_video_id": "demo-trial2",
+      "kind": "generate",
+      "state": "running",
+      "stage": "mock_baseline",
+      "is_mock": true,
+      "attempt": 1,
+      "retry_of": null,
+      "created_at": "2026-11-19T14:31:55.952761+00:00",
+      "updated_at": "2026-11-19T14:31:55.952774+00:00",
+      "result": null,
+      "error": null
+    },
+    {
+      "schema_version": 1,
+      "id": "mock-8116c5fdebfd4f0398a307da65384c75",
+      "owner_id": "mock-user",
+      "source_video_id": "demo-trial2",
+      "kind": "generate",
+      "state": "succeeded",
+      "stage": "complete",
+      "is_mock": true,
+      "attempt": 1,
+      "retry_of": null,
+      "created_at": "2026-11-19T14:31:55.952761+00:00",
+      "updated_at": "2026-11-19T14:31:55.952780+00:00",
+      "result": {
+        "schema_version": 1,
+        "kind": "generate",
+        "is_mock": true,
+        "algorithm_version": "mock-v1",
+        "source_analysis_version": "mock-source-v1",
+        "calibration_version": "trial2-grid143-v1",
+        "source_video_id": "demo-trial2",
+        "frame_count": 976,
+        "fps": 30.0,
+        "quality": {
+          "evidence": "sufficient",
+          "geometry_status": "assumed",
+          "physical_validation": false,
+          "check_scope": "none",
+          "warnings": [
+            "SIMULATION: no skeleton or video was generated."
+          ]
+        },
+        "original_body": null,
+        "target_body": {
+          "height_cm": 170.0,
+          "arm_span_cm": 175.0,
+          "provenance": "user_input"
+        },
+        "artifacts": {},
+        "baseline_status": "passed",
+        "technique_status": "no_improvement",
+        "suggestions": [],
+        "moments": []
+      },
+      "error": null
+    }
+  ],
+  "notifications": [
+    {
+      "id": "mock-notification-mock-8116c5fdebfd4f0398a307da65384c75",
+      "owner_id": "mock-user",
+      "task_id": "mock-8116c5fdebfd4f0398a307da65384c75",
+      "event": "task_succeeded",
+      "created_at": "2026-11-19T14:31:55.952793+00:00",
+      "read_at": null,
+      "is_mock": true
+    }
+  ]
+}

@@ -8,7 +8,12 @@ ROOT = Path(__file__).resolve().parents[2]
 DB = Path(__file__).resolve().parent
 
 
-def execute(sql):
+def execute(sql, direct=False):
+    if direct:
+        from backend.database import database
+        with database() as db:
+            db.execute(sql)
+        return
     subprocess.run(
         ['docker', 'compose', 'exec', '-T', 'db', 'sh', '-c',
          'exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'],
@@ -16,7 +21,7 @@ def execute(sql):
     )
 
 
-def migrate():
+def migrate(direct=False):
     # One transaction and advisory lock serialize concurrent migration commands.
     statements = ['BEGIN;', 'SELECT pg_advisory_xact_lock(73114001);',
                   'CREATE TABLE IF NOT EXISTS schema_migrations '
@@ -41,14 +46,15 @@ END
 $migration$;
 """)
     statements.append('COMMIT;')
-    execute('\n'.join(statements))
+    execute('\n'.join(statements), direct=direct)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('command', choices=['migrate', 'seed'])
+    parser.add_argument('--direct', action='store_true', help='Use configured host PostgreSQL instead of Docker')
     args = parser.parse_args()
     if args.command == 'migrate':
-        migrate()
+        migrate(direct=args.direct)
     else:
-        execute('BEGIN;\n' + (DB / 'seeds/catalog.sql').read_text() + '\nCOMMIT;')
+        execute('BEGIN;\n' + (DB / 'seeds/catalog.sql').read_text() + '\nCOMMIT;', direct=args.direct)

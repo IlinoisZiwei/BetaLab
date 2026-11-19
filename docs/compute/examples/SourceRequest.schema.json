@@ -1,0 +1,137 @@
+{
+  "$defs": {
+    "Body": {
+      "additionalProperties": false,
+      "properties": {
+        "height_cm": {
+          "maximum": 230,
+          "minimum": 100,
+          "title": "Height Cm",
+          "type": "number"
+        },
+        "arm_span_cm": {
+          "maximum": 260,
+          "minimum": 80,
+          "title": "Arm Span Cm",
+          "type": "number"
+        },
+        "provenance": {
+          "enum": [
+            "user_input",
+            "manual_correction",
+            "estimated"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        }
+      },
+      "required": [
+        "height_cm",
+        "arm_span_cm",
+        "provenance"
+      ],
+      "title": "Body",
+      "type": "object"
+    },
+    "Calibration": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "grid_spacing_cm": {
+          "const": 14.3,
+          "default": 14.3,
+          "title": "Grid Spacing Cm",
+          "type": "number"
+        },
+        "grid_axes_equal": {
+          "const": true,
+          "default": true,
+          "title": "Grid Axes Equal",
+          "type": "boolean"
+        },
+        "reference_frame": {
+          "minimum": 0,
+          "title": "Reference Frame",
+          "type": "integer"
+        },
+        "geometry_status": {
+          "default": "assumed",
+          "enum": [
+            "assumed",
+            "reviewed"
+          ],
+          "title": "Geometry Status",
+          "type": "string"
+        },
+        "coordinate_system": {
+          "const": "wall_xyz_cm_y_up",
+          "default": "wall_xyz_cm_y_up",
+          "title": "Coordinate System",
+          "type": "string"
+        },
+        "evidence_key": {
+          "minLength": 1,
+          "title": "Evidence Key",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "reference_frame",
+        "evidence_key"
+      ],
+      "title": "Calibration",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "kind": {
+      "const": "analyze",
+      "default": "analyze",
+      "title": "Kind",
+      "type": "string"
+    },
+    "video_id": {
+      "minLength": 1,
+      "title": "Video Id",
+      "type": "string"
+    },
+    "route_id": {
+      "minLength": 1,
+      "title": "Route Id",
+      "type": "string"
+    },
+    "calibration": {
+      "$ref": "#/$defs/Calibration"
+    },
+    "uploader_body": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Body"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "video_id",
+    "route_id",
+    "calibration"
+  ],
+  "title": "SourceRequest",
+  "type": "object"
+}

@@ -1,0 +1,55 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "owner_id": {
+      "title": "Owner Id",
+      "type": "string"
+    },
+    "task_id": {
+      "title": "Task Id",
+      "type": "string"
+    },
+    "event": {
+      "enum": [
+        "task_succeeded",
+        "task_failed"
+      ],
+      "title": "Event",
+      "type": "string"
+    },
+    "created_at": {
+      "title": "Created At",
+      "type": "string"
+    },
+    "read_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Read At"
+    },
+    "is_mock": {
+      "title": "Is Mock",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "id",
+    "owner_id",
+    "task_id",
+    "event",
+    "created_at",
+    "is_mock"
+  ],
+  "title": "Notification",
+  "type": "object"
+}

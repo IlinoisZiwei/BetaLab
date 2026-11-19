@@ -4,3 +4,6 @@ psycopg[binary]>=3.2,<4
 python-dotenv>=1,<2
 pwdlib[argon2]>=0.2,<1
 python-multipart>=0.0.20,<1
+
+# Stage-one compute dependencies (also supplied transitively by FastAPI).
+pydantic>=2.10,<3

@@ -1,0 +1,90 @@
+/* Shared visual polish: existing structure and component behavior retained. */
+:root {
+  --ui-font:'Geist', Inter, Arial, sans-serif;
+  --text-primary:#20384f;
+  --brand-blue:#285c91;
+  --brand-orange:#d66a25;
+  --accent-ink:#9c4b15;
+  --surface-selected:#e7eff8;
+  --surface-page:#f5f8fc;
+  --surface-card:#fff;
+  --glass-surface:linear-gradient(145deg,rgba(245,251,255,.36),rgba(225,240,253,.16));
+  --glass-border:rgba(151,181,205,.24);
+  --glass-shadow:inset 0 1px 0 rgba(255,255,255,.42),0 4px 14px rgba(34,67,95,.07);
+  --shadow-card:0 4px 16px rgba(32,56,79,.045);
+  --text-secondary:#52677a;
+  --text-muted:#5d7083;
+  --ui-border:#d9e4ef;
+  --ui-focus:#477ba9;
+  --radius-card:16px;
+  --radius-control:12px;
+}
+.phone { font-family:var(--ui-font); }
+.phone button,.phone input,.phone select,.phone textarea { font-family:var(--ui-font); }
+.phone :is(.section-kicker,.route-meta,.grade,.workspace-context span,.player-controls > span,.attempt-history small,.beta-video-card small,.generated-video-meta strong,.community-video-link .card-body small,.history-date,.history-status) { font-family:var(--ui-font); font-variant-numeric:tabular-nums; }
+.phone :is(.topbar strong) { position:relative; font-size:15px; font-weight:600; }
+/* A small shared brand accent; navigation states remain blue. */
+.phone .topbar strong::after { content:""; position:absolute; left:50%; bottom:-7px; width:18px; height:3px; border-radius:2px; background:var(--brand-orange); transform:translateX(-50%); pointer-events:none; }
+.phone :is(.route-title,.form-page h1,.gym-selection-intro h1,.route-gallery-intro h1,.workspace-video-header h1) { font-size:24px; font-weight:600; line-height:1.25; letter-spacing:-.5px; }
+.phone :is(.section-heading h2,.comments-heading h2,.history-toggle) { font-size:17px; line-height:1.4; font-weight:600; }
+.phone :is(.gym-card-info b,.route-open b,.history-entry-title strong,.beta-card-details > b,.community-card-location strong,.attempt-history b) { font-size:15px; line-height:1.4; font-weight:600; color:var(--text-primary); }
+.phone :is(.field,.field-row.compact .field) { font-size:12px; line-height:1.5; letter-spacing:0; color:var(--text-secondary); }
+.phone :is(.field input,.field select,.form-page textarea) { font-size:16px; line-height:1.5; border-radius:var(--radius-control); }
+.phone :is(.muted,.small,.route-meta,.section-kicker,.attempt-history small,.library-list small,.history-status,.history-date,.community-card-author,.community-card-summary .community-card-author,.community-card-gym,.community-card-route,.beta-climber-measurements,.beta-author-line > span,.workspace-attempt-date,.workspace-set,.gym-area,.gym-list-heading > span,.gym-route-count.is-empty,.route-open em,.gallery-route-meta small,.video-status-inline,.comment-byline span,.comment-actions button,.comment-delete,.comments-empty p,.library-empty p,.home-secondary-entry small) { color:var(--text-muted); }
+.phone :is(.attempt-history small,.library-list small,.history-status,.history-date,.community-card-summary .community-card-author,.beta-climber-measurements,.workspace-attempt-date,.gym-area,.route-open em,.gallery-route-meta small,.gym-list-heading > span,.home-secondary-entry small) { font-size:12px; line-height:1.5; }
+.phone :is(.beta-card-difference) { font-size:11px; color:var(--brand-blue); font-weight:600; letter-spacing:0; }
+.phone :is(.gym-route-count,.gallery-grade,.community-card-grade,.history-grade) { font-size:11px; color:#4c6d8a; line-height:1.4; }
+.phone :is(.history-thumbnail > span,.beta-card-duration) { font-size:11px; font-variant-numeric:tabular-nums; }
+.phone :is(.suggestion-card p,.suggestion-text,.form-page > p,.process-status p,.confidence-note p) { font-size:14px; line-height:1.55; color:var(--text-secondary); }
+.phone :is(.analysis-toggle,.tabs button,.segmented button) { font-size:13px; }
+.phone :is(.comment-content p) { font-size:15px; line-height:1.5; }
+.phone :is(.comment-reply .comment-content p) { font-size:14px; }
+.phone :is(.home-entry-grid,.card-list,.route-list,.gym-selection-list) { gap:12px; }
+.phone :is(.gym-card,.route-card,.video-card,.history-entries,.library-list > button,.attempt-history > button,.beta-video-card) { border-radius:var(--radius-card); border-color:var(--ui-border); background-color:var(--surface-card); box-shadow:var(--shadow-card); }
+.phone :is(.route-open > .real-media-image,.gym-cover,.history-thumbnail .real-media-image,.beta-card-thumbnail .real-media-image) { border-radius:10px; }
+.phone :is(.community-filters select,.gym-search,.community-search,.gallery-tools select) { border-radius:var(--radius-control); background-color:#edf2f8; border-color:var(--ui-border); color:var(--text-secondary); }
+.phone :is(.section-kicker) { font-size:11px; letter-spacing:.06em; }
+.phone :is(.comment-actions button,.comment-delete,.replies-toggle) { min-height:28px; }
+.phone :is(.comment-actions button.is-liked) { color:#315fce; }
+.phone :is(.replies-toggle) { color:#416b91; }
+.phone :is(.video-ready i) { background:#617f9b; }
+/* Keep icons visually small while giving them a larger transparent hit area. */
+.phone :is(.beta-icon-actions button,.workspace-more) { position:relative; }
+.phone .bookmark-button { position:absolute; }
+.phone :is(.beta-icon-actions button,.bookmark-button,.workspace-more)::after { content:""; position:absolute; width:44px; height:44px; top:50%; left:50%; transform:translate(-50%,-50%); }
+.phone .beta-icon-actions { gap:12px; }
+.phone :is(.beta-icon-actions svg,.bookmark-button svg,.topbar .back svg) { stroke-width:1.7; }
+.phone .beta-icon-actions button[aria-pressed="true"] svg { fill:currentColor; }
+.phone button { -webkit-tap-highlight-color:transparent; transition:background-color 140ms ease,color 140ms ease,border-color 140ms ease,box-shadow 140ms ease; }
+.phone :is(.btn,.home-entry-grid button,.gym-card,.route-open,.history-row,.community-video-link) { transition:transform 140ms ease,background-color 140ms ease,color 140ms ease; }
+.phone :is(.btn,.home-entry-grid button,.gym-card,.route-open,.history-row,.community-video-link):active { transform:scale(.99); }
+.phone :is(button,input,select,textarea):focus-visible { outline:2px solid var(--ui-focus); outline-offset:3px; }
+.phone button:disabled { cursor:not-allowed; }
+.phone :is(.tabs button.active,.segmented button.active) { background:var(--brand-blue); color:#fff; border-color:var(--brand-blue); }
+.phone :is(.comment-post:disabled) { color:#627789; opacity:.65; }
+.phone :is(.comment-section textarea,.comment-section .comment-content p) { overflow-wrap:anywhere; }
+.phone :is(.gym-search input,.community-search input)::placeholder { color:#61788b; }
+@media(prefers-reduced-motion:reduce) {
+  .phone .screen { animation:none; }
+  .phone button,.phone .video-body-label { transition:none; }
+  .phone button:active { transform:none; }
+}
+.phone .segmented { border-radius:12px; overflow:hidden; border:1px solid var(--ui-border); }
+.phone .segmented button { border:0; min-height:40px; background:#edf4fb; color:var(--text-secondary); }
+.phone .segmented button.active { background:#dceafa; color:#315fce; font-weight:600; }
+.phone .form-page > .muted { margin-top:12px; font-size:12px; line-height:1.5; }
+.phone .route-image { border-radius:12px; }
+
+.phone .route-gallery-page .route-open { min-height:104px; padding-top:10px; padding-bottom:10px; }
+.phone .route-gallery-page .gallery-route-meta { gap:5px; margin-top:4px; }
+.phone .route-gallery-page .route-open em { margin-top:3px; }
+
+.route-detail-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:0 0 18px; }
+.route-detail-heading h1 { margin:0; font-size:24px; font-weight:600; line-height:1.25; letter-spacing:-.5px; color:#29465e; }
+.route-detail-heading > span { padding:5px 12px; border-radius:10px; background:#dfecfa; color:#315f94; font-size:22px; font-weight:650; line-height:1.3; }
+
+.route-detail-page .add-attempt-card { display:flex; align-items:center; justify-content:center; gap:10px; text-align:center; }
+.route-detail-page .route-detail-heading h1 { font-size:20px; }
+.route-detail-page .route-detail-heading > span { font-size:16px; padding:4px 9px; border-radius:8px; }
+.route-detail-page .previous-attempts-heading { justify-content:flex-start; gap:8px; }
+.route-detail-page .previous-attempts-heading > span { display:inline-flex; align-items:center; justify-content:center; min-width:24px; padding:2px 7px; border-radius:7px; background:#e2eefb; color:#557a9d; font-size:12px; font-weight:500; line-height:1.5; }

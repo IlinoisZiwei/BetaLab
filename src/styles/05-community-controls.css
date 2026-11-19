@@ -1,0 +1,224 @@
+@layer components {
+  .home-screen {
+    padding-top: max(56px, calc(env(safe-area-inset-top, 0px) + 28px));
+  }
+
+  .community-video-link {
+    width: 100%;
+    display: block;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    text-align: left;
+  }
+
+  .community-video-media {
+    position: relative;
+    display: block;
+  }
+
+  .community-video-media .placeholder {
+    min-height: 170px;
+    border: 0;
+    border-radius: 9px 9px 0 0;
+    background: var(--charcoal);
+    color: var(--chalk);
+  }
+
+  .community-video-link .card-body {
+    display: grid;
+    gap: 5px;
+    padding: 13px 14px 14px;
+  }
+
+  .community-video-link .card-body strong {
+    color: var(--charcoal);
+    font-size: 14px;
+  }
+
+  .community-video-link .card-body small {
+    color: var(--mid-gray);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+  }
+
+  .community-video-link:active {
+    transform: scale(.99);
+  }
+
+  .community-beta-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .home-header {
+    align-items: center;
+    border-color: var(--stone);
+    padding-bottom: 20px;
+  }
+
+  .brand-lockup {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    transform: translateY(3px);
+  }
+
+  .brand-mark {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: var(--electric-blue);
+    color: #fff;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -.04em;
+  }
+
+  .home-header .brand-lockup h1 {
+    display: flex;
+    margin: 0;
+    color: var(--charcoal);
+    font-size: 35px;
+    letter-spacing: -.055em;
+  }
+
+  .home-header .brand-lockup h1 span:last-child {
+    color: var(--electric-blue);
+  }
+
+  .account-icon-button {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--stone);
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--charcoal);
+    padding: 0;
+    transition:
+      border-color 120ms ease,
+      background-color 120ms ease,
+      transform 120ms ease;
+  }
+
+  .account-icon-button:active {
+    transform: scale(.95);
+  }
+
+  .account-icon {
+    position: relative;
+    width: 19px;
+    height: 20px;
+    display: block;
+  }
+
+  .account-icon i:first-child {
+    position: absolute;
+    top: 0;
+    left: 6px;
+    width: 8px;
+    height: 8px;
+    border: 1.8px solid currentColor;
+    border-radius: 50%;
+  }
+
+  .account-icon i:last-child {
+    position: absolute;
+    right: 1px;
+    bottom: 0;
+    left: 1px;
+    height: 9px;
+    border: 1.8px solid currentColor;
+    border-bottom: 0;
+    border-radius: 10px 10px 0 0;
+  }
+
+  .route-card {
+    position: relative;
+  }
+
+  .route-open {
+    grid-template-columns: 76px 1fr;
+    padding-right: 54px;
+  }
+
+  .bookmark-button {
+    position: absolute;
+    z-index: 2;
+    top: 50%;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    transform: translateY(-50%);
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--charcoal);
+    padding: 0;
+    transition:
+      background-color 140ms ease,
+      color 140ms ease,
+      transform 120ms ease;
+  }
+
+  .bookmark-button svg {
+    width: 22px;
+    height: 22px;
+    overflow: visible;
+  }
+
+  .bookmark-button path {
+    fill: transparent;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: fill 140ms ease;
+  }
+
+  .bookmark-button.marked {
+    background: var(--electric-blue-light);
+    color: var(--electric-blue);
+  }
+
+  .bookmark-button.marked path {
+    fill: currentColor;
+  }
+
+  .bookmark-button:active {
+    transform: translateY(-50%) scale(.9);
+  }
+
+  .add-attempt-card {
+    grid-template-columns: 40px 1fr;
+    gap: 2px 10px;
+  }
+
+  .add-attempt-card > span {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 9px;
+    background: var(--electric-blue-light);
+    color: var(--electric-blue);
+    font-size: 22px;
+    font-weight: 500;
+  }
+
+  @media (hover: hover) {
+    .account-icon-button:hover,
+    .bookmark-button:hover {
+      border-color: var(--electric-blue);
+      background: var(--electric-blue-light);
+      color: var(--electric-blue);
+    }
+  }
+}

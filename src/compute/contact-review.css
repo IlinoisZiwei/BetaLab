@@ -1,0 +1,15 @@
+.contact-review { display: grid; gap: 12px; margin-block: 20px; min-width: 0; }
+.contact-review fieldset { display: grid; gap: 12px; padding: 12px; border: 1px solid var(--stone, #d9e4ef); border-radius: 8px; }
+.contact-review legend { padding-inline: 4px; font-weight: 600; }
+.contact-review label { display: grid; gap: 6px; min-width: 0; }
+.contact-review input:not([type=checkbox]), .contact-review select, .contact-review textarea {
+  width: 100%; min-width: 0; min-height: 40px; padding: 8px; border: 1px solid var(--stone, #d9e4ef);
+  border-radius: 6px; background: white; color: inherit; font: inherit;
+}
+.contact-review textarea { min-height: 90px; }
+.contact-review button { min-height: 40px; padding: 8px 12px; border: 1px solid var(--stone, #d9e4ef);
+  border-radius: 6px; background: white; color: var(--electric-blue, #285c91); text-align: left; }
+.contact-review button:disabled { opacity: .5; cursor: default; }
+.contact-review a { display: inline-block; padding-block: 6px; text-decoration: underline; }
+.contact-review .contact-confirmation { display: flex; align-items: flex-start; gap: 8px; }
+.contact-review input[type=checkbox] { flex-shrink: 0; margin-top: 4px; }

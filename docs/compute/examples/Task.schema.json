@@ -1,0 +1,513 @@
+{
+  "$defs": {
+    "Artifact": {
+      "additionalProperties": false,
+      "properties": {
+        "storage_key": {
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_-]+(?:/[A-Za-z0-9_.-]+)+$",
+          "title": "Storage Key",
+          "type": "string"
+        },
+        "media_type": {
+          "title": "Media Type",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "storage_key",
+        "media_type",
+        "sha256"
+      ],
+      "title": "Artifact",
+      "type": "object"
+    },
+    "Body": {
+      "additionalProperties": false,
+      "properties": {
+        "height_cm": {
+          "maximum": 230,
+          "minimum": 100,
+          "title": "Height Cm",
+          "type": "number"
+        },
+        "arm_span_cm": {
+          "maximum": 260,
+          "minimum": 80,
+          "title": "Arm Span Cm",
+          "type": "number"
+        },
+        "provenance": {
+          "enum": [
+            "user_input",
+            "manual_correction",
+            "estimated"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        }
+      },
+      "required": [
+        "height_cm",
+        "arm_span_cm",
+        "provenance"
+      ],
+      "title": "Body",
+      "type": "object"
+    },
+    "Error": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "INVALID_INPUT",
+            "SOURCE_UNAVAILABLE",
+            "STALE_ANALYSIS",
+            "INSUFFICIENT_EVIDENCE",
+            "WORKER_FAILED",
+            "INTERRUPTED"
+          ],
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "title": "Retryable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "title": "Error",
+      "type": "object"
+    },
+    "Moment": {
+      "additionalProperties": false,
+      "description": "A model diagnostic, not an observed technique recommendation.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "contact_gap",
+            "unconfirmed_contact"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "frame": {
+          "minimum": 0,
+          "title": "Frame",
+          "type": "integer"
+        },
+        "at_seconds": {
+          "minimum": 0,
+          "title": "At Seconds",
+          "type": "number"
+        },
+        "end_frame": {
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "limb": {
+          "enum": [
+            "left_hand",
+            "right_hand",
+            "left_foot",
+            "right_foot"
+          ],
+          "title": "Limb",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "explanation": {
+          "title": "Explanation",
+          "type": "string"
+        },
+        "media": {
+          "const": "video",
+          "default": "video",
+          "title": "Media",
+          "type": "string"
+        },
+        "gap_cm": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gap Cm"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "frame",
+        "at_seconds",
+        "end_frame",
+        "limb",
+        "title",
+        "explanation"
+      ],
+      "title": "Moment",
+      "type": "object"
+    },
+    "Quality": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "enum": [
+            "sufficient",
+            "low_confidence",
+            "insufficient"
+          ],
+          "title": "Evidence",
+          "type": "string"
+        },
+        "geometry_status": {
+          "enum": [
+            "assumed",
+            "reviewed"
+          ],
+          "title": "Geometry Status",
+          "type": "string"
+        },
+        "physical_validation": {
+          "const": false,
+          "default": false,
+          "title": "Physical Validation",
+          "type": "boolean"
+        },
+        "check_scope": {
+          "default": "none",
+          "enum": [
+            "none",
+            "geometry_only",
+            "full_model"
+          ],
+          "title": "Check Scope",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "evidence",
+        "geometry_status"
+      ],
+      "title": "Quality",
+      "type": "object"
+    },
+    "Result": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "kind": {
+          "enum": [
+            "analyze",
+            "generate"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "is_mock": {
+          "title": "Is Mock",
+          "type": "boolean"
+        },
+        "algorithm_version": {
+          "title": "Algorithm Version",
+          "type": "string"
+        },
+        "source_analysis_version": {
+          "title": "Source Analysis Version",
+          "type": "string"
+        },
+        "calibration_version": {
+          "title": "Calibration Version",
+          "type": "string"
+        },
+        "source_video_id": {
+          "title": "Source Video Id",
+          "type": "string"
+        },
+        "frame_count": {
+          "exclusiveMinimum": 0,
+          "title": "Frame Count",
+          "type": "integer"
+        },
+        "fps": {
+          "exclusiveMinimum": 0,
+          "title": "Fps",
+          "type": "number"
+        },
+        "quality": {
+          "$ref": "#/$defs/Quality"
+        },
+        "original_body": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Body"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "target_body": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Body"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "artifacts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Artifact"
+          },
+          "title": "Artifacts",
+          "type": "object"
+        },
+        "baseline_status": {
+          "enum": [
+            "not_requested",
+            "not_checked",
+            "passed",
+            "failed",
+            "insufficient_evidence"
+          ],
+          "title": "Baseline Status",
+          "type": "string"
+        },
+        "technique_status": {
+          "enum": [
+            "not_requested",
+            "blocked",
+            "compared",
+            "no_improvement"
+          ],
+          "title": "Technique Status",
+          "type": "string"
+        },
+        "suggestions": {
+          "items": {
+            "$ref": "#/$defs/Suggestion"
+          },
+          "title": "Suggestions",
+          "type": "array"
+        },
+        "moments": {
+          "items": {
+            "$ref": "#/$defs/Moment"
+          },
+          "title": "Moments",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "is_mock",
+        "algorithm_version",
+        "source_analysis_version",
+        "calibration_version",
+        "source_video_id",
+        "frame_count",
+        "fps",
+        "quality",
+        "baseline_status",
+        "technique_status"
+      ],
+      "title": "Result",
+      "type": "object"
+    },
+    "Suggestion": {
+      "additionalProperties": false,
+      "properties": {
+        "video_id": {
+          "title": "Video Id",
+          "type": "string"
+        },
+        "at_seconds": {
+          "minimum": 0,
+          "title": "At Seconds",
+          "type": "number"
+        },
+        "observed_movement": {
+          "title": "Observed Movement",
+          "type": "string"
+        },
+        "technique": {
+          "title": "Technique",
+          "type": "string"
+        },
+        "explanation": {
+          "title": "Explanation",
+          "type": "string"
+        },
+        "evidence": {
+          "enum": [
+            "example",
+            "model_candidate",
+            "insufficient"
+          ],
+          "title": "Evidence",
+          "type": "string"
+        }
+      },
+      "required": [
+        "video_id",
+        "at_seconds",
+        "observed_movement",
+        "technique",
+        "explanation",
+        "evidence"
+      ],
+      "title": "Suggestion",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "owner_id": {
+      "title": "Owner Id",
+      "type": "string"
+    },
+    "source_video_id": {
+      "title": "Source Video Id",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "analyze",
+        "generate"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "queued",
+        "running",
+        "succeeded",
+        "failed"
+      ],
+      "title": "State",
+      "type": "string"
+    },
+    "stage": {
+      "title": "Stage",
+      "type": "string"
+    },
+    "is_mock": {
+      "title": "Is Mock",
+      "type": "boolean"
+    },
+    "attempt": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Attempt",
+      "type": "integer"
+    },
+    "retry_of": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Retry Of"
+    },
+    "created_at": {
+      "title": "Created At",
+      "type": "string"
+    },
+    "updated_at": {
+      "title": "Updated At",
+      "type": "string"
+    },
+    "result": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Result"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Error"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "id",
+    "owner_id",
+    "source_video_id",
+    "kind",
+    "state",
+    "stage",
+    "is_mock",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "Task",
+  "type": "object"
+}

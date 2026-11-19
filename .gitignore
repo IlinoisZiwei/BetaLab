@@ -17,3 +17,13 @@ local-server/prepared/
 
 # Personal follow-up notes; never publish
 docs/YIRU_LOCAL_TODO.md
+
+# Reproducible C calibration outputs and local mock runs
+backend/compute/runs/
+
+# Authenticated compute artifacts, private inputs and worker logs
+data/compute/
+
+# Local historical backups are intentionally never published.
+/docs/archive/
+/before-*.css

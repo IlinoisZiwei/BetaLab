@@ -1,0 +1,82 @@
+/* Route detail: quiet upload action and media-led attempt rows. */
+.phone .route-detail-page .add-attempt-card { min-height:48px; margin:14px 0 24px; padding:10px 16px; gap:8px; border:1px solid #d5e5f4; border-radius:12px; background:#e5f0fb; color:#416c93; box-shadow:none; }
+.phone .route-detail-page .add-attempt-card > .add-video-symbol { display:flex; align-items:center; justify-content:center; width:22px; height:22px; border:0; border-radius:0; background:transparent; color:inherit; }
+.add-video-symbol svg { width:19px; height:19px; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; fill:none; }
+.phone .route-detail-page .add-attempt-card strong { font-size:14px; font-weight:500; color:inherit; }
+.phone .route-detail-page .add-attempt-card:hover { background:#dcebf9; }
+.route-detail-page .attempt-history { gap:10px; }
+.phone .route-detail-page .attempt-history > button { display:grid; grid-template-columns:68px minmax(0,1fr); align-items:center; gap:12px; padding:12px; border:1px solid #deE8f1; border-radius:14px; background:rgba(255,255,255,.8); text-align:left; }
+.attempt-cover { display:block; position:relative; width:68px; height:68px; }
+.phone .route-detail-page .attempt-cover .real-media-image { display:block; width:68px; height:68px; object-fit:cover; border-radius:9px; }
+.phone .route-detail-page .attempt-cover .real-media-video-thumbnail { display:block; width:68px; height:68px; object-fit:cover; border-radius:9px; background:#10151d; }
+.attempt-play { position:absolute; bottom:4px; right:4px; width:20px; height:20px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(240,248,255,.9); color:#6687a5; }
+.attempt-play svg { width:11px; height:11px; fill:currentColor; }
+.phone .route-detail-page .attempt-history > button > span:last-child { color:#304d65; }
+.phone .route-detail-page .attempt-history b { font-size:14px; font-weight:600; line-height:1.4; }
+.phone .route-detail-page .attempt-history small { margin-top:4px; font-size:12px; line-height:1.4; color:#61788b; }
+.phone .route-detail-page .attempt-history small:last-child { font-size:11px; color:#6c8295; }
+
+.phone .workspace-title-row h1 { display:flex; align-items:center; gap:9px; font-size:20px; }
+.workspace-title-grade { padding:3px 8px; border-radius:7px; background:#dfecfa; color:#416b96; font-size:16px; line-height:1.4; letter-spacing:0; }
+.workspace-info-line { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px; }
+.phone .workspace-info-line .workspace-attempt-date { margin:0; gap:4px; font-size:11px; white-space:nowrap; }
+.workspace-info-line .video-status-inline { gap:4px; font-size:11px; white-space:nowrap; }
+.phone .workspace-flow .analysis-tools { display:block; padding-top:16px; }
+.workspace-mode-tabs { display:flex; padding:4px; gap:4px; border:1px solid #dce7f2; background:#edf3fa; border-radius:12px; margin-bottom:12px; }
+.workspace-mode-tabs button { flex:1; border:0; border-radius:9px; padding:11px 5px; background:transparent; color:#637c92; font-size:12px; font-weight:500; }
+.workspace-mode-tabs button[aria-selected="true"] { background:#dbeafb; color:#315f94; font-weight:600; }
+.phone .analysis-tools .compact-suggestions { display:block; border:1px solid #dce7f1; border-radius:14px; background:#fff; overflow:hidden; padding:0; margin:0; }
+.phone .compact-suggestions .suggestion-card { margin:0; border:0; border-radius:0; padding:13px 14px; background:transparent; }
+.phone .compact-suggestions .suggestion-card + .suggestion-card { border-top:1px solid var(--glass-border); background:transparent; }
+.phone .compact-suggestions .suggestion-card p { margin:5px 0 0; font-size:13px; line-height:1.5; }
+.phone .compact-suggestions .suggestion-card > b { font-size:12px; color:#61788b; font-weight:500; }
+.phone .compact-suggestions .cue-link { padding:0 0 4px; font-size:12px; color:#416d99; text-decoration:underline; font-weight:600; }
+.phone .compact-suggestions .technical-term { font-size:13px; }
+
+/* Compact upload composer, retaining explicit privacy selection. */
+.phone .workspace-flow .inline-upload { border:1px solid #dce7f1; border-radius:14px; padding:14px; margin-top:8px; gap:10px; background:rgba(255,255,255,.8); }
+.phone .inline-upload .real-media-video { border-radius:10px; max-height:230px; }
+.phone .inline-upload .upload-preview-label { font-size:12px; color:#61788b; }
+.phone .inline-upload .upload-intro { margin:0; font-size:13px; line-height:1.5; color:#61788b; }
+.phone .inline-upload .upload-privacy { margin:2px 0 0; }
+.phone .inline-upload .upload-privacy legend { font-size:13px; line-height:1.4; font-weight:500; margin-bottom:8px; color:#496780; }
+.phone .inline-upload .privacy-options { gap:8px; }
+.phone .inline-upload .privacy-options label { display:flex; align-items:center; justify-content:center; min-height:38px; padding:8px 12px; border:1px solid #bed6ec; border-radius:10px; color:#557b9e; font-size:13px; font-weight:500; }
+.phone .inline-upload .privacy-options label.selected { background:#4b79ad; border-color:#4b79ad; color:#fff; }
+.phone .inline-upload .upload-privacy p { margin:7px 0 0; font-size:12px; line-height:1.4; color:#61788b; }
+.phone .inline-upload .inline-buttons { display:flex; justify-content:flex-end; gap:8px; padding-top:4px; }
+.phone .inline-upload .inline-buttons .btn { min-height:36px; padding:8px 14px; border-radius:10px; font-size:13px; font-weight:500; }
+.phone .inline-upload .inline-buttons .btn-outline { background:transparent; border-color:transparent; color:#61788b; }
+.phone .inline-upload .demo-controls { border-top:1px solid #e4edf5; padding-top:9px; font-size:11px; color:#6b8195; }
+.phone .inline-upload .demo-controls p { font-size:11px; margin:6px 0 0; }
+.phone .inline-upload .demo-controls select { width:100%; margin-top:7px; font:inherit; font-size:12px; padding:7px; border:1px solid #dce7f1; border-radius:8px; }
+
+/* Inline upload controls, without a second large enclosing card. */
+.phone .workspace-flow .inline-upload { border:0; padding:0; background:transparent; border-radius:0; gap:10px; }
+.phone .inline-upload .upload-privacy { display:grid; grid-template-columns:auto 1fr; align-items:center; gap:6px 12px; margin:2px 0 0; }
+.phone .inline-upload .upload-privacy legend { float:left; width:auto; margin:0; padding:0; font-size:12px; }
+.phone .inline-upload .privacy-options { display:flex; justify-content:flex-end; gap:14px; }
+.phone .inline-upload .privacy-options label { flex:0 0 auto; min-height:32px; padding:4px 0; gap:6px; border:0; border-radius:0; background:transparent; color:#61788b; font-size:12px; }
+.phone .inline-upload .privacy-options label.selected { border:0; background:transparent; color:#315f94; }
+.phone .inline-upload .privacy-options input { position:static; opacity:1; width:14px; height:14px; margin:0; accent-color:#4b79ad; cursor:pointer; }
+.phone .inline-upload .privacy-options label:focus-within { outline:none; }
+.phone .inline-upload .privacy-options input:focus-visible { outline:2px solid #799ec3; outline-offset:3px; }
+.phone .inline-upload .upload-privacy p { grid-column:1/-1; margin:0; font-size:11px; }
+.phone .inline-upload .inline-buttons { justify-content:flex-end; padding:0; gap:10px; }
+.phone .inline-upload .inline-buttons .btn { flex:0 0 auto; width:auto; min-height:34px; padding:7px 15px; font-size:12px; }
+.phone .inline-upload .demo-controls { margin-top:2px; padding-top:8px; }
+
+.phone .inline-upload .demo-controls { display:none; }
+.phone .workspace-flow .inline-upload { gap:6px; }
+.phone .inline-upload .upload-privacy { margin:0; row-gap:3px; }
+.phone .inline-upload .inline-buttons { margin:0; padding-top:0; }
+.phone .workspace-flow .video-section:has(.inline-upload) { padding-bottom:12px; }
+.phone .inline-upload .inline-buttons { justify-content:space-between; align-items:center; margin-top:8px; }
+.phone .inline-upload .inline-buttons .btn-outline { padding-left:0; }
+.phone .workspace-flow .video-section:has(.inline-upload) { border-bottom:0; padding-bottom:0; }
+.phone .inline-upload .inline-buttons { justify-content:flex-end; }
+.phone .inline-upload .inline-buttons .btn-outline { padding-left:15px; }
+
+.preview-status-row {display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;color:#50748d;font-size:12px;}
+.preview-status-row .btn {font-size:12px;min-height:32px;padding:4px 0;}
+.preview-note {margin:4px 0!important;font-size:12px;line-height:1.45;}

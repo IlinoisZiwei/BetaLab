@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "analyze",
+  "video_id": "demo-trial2",
+  "route_id": "r1",
+  "calibration": {
+    "version": "trial2-grid143-v1",
+    "grid_spacing_cm": 14.3,
+    "grid_axes_equal": true,
+    "reference_frame": 450,
+    "geometry_status": "assumed",
+    "coordinate_system": "wall_xyz_cm_y_up",
+    "evidence_key": "calibration/trial2-grid143-v1"
+  },
+  "uploader_body": null
+}

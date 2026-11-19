@@ -1,0 +1,15 @@
+.compute-nav{display:flex;gap:8px;padding:10px 16px;justify-content:flex-end;background:var(--surface,#f4f8fa);position:relative;z-index:4}
+.compute-nav button,.compute-library button,.compute-modal button{cursor:pointer}
+.compute-nav button{border:1px solid #b9cbd5;border-radius:18px;padding:8px 12px;background:#fff;color:#234453;font-size:12px}
+.compute-library{padding:18px 18px 90px;background:#f4f8fa;color:#203945}
+.compute-library h2{font-size:20px}.compute-library p,.compute-modal p{font-size:14px;line-height:1.5}
+.compute-row{display:block;width:100%;text-align:left;padding:12px;margin:8px 0;border:1px solid #ccdce4;border-radius:12px;background:#fff;color:#203945}
+.compute-row small{display:block;margin-top:5px}.compute-result{margin-top:20px;padding:14px;border:1px solid #ccdce4;border-radius:14px;background:#fff}
+.compute-result video{width:100%;margin:12px 0}.compute-warning{padding:10px;background:#fff3d9;border-radius:8px;color:#624514}
+.compute-error{position:relative;z-index:5;padding:12px;background:#fff1ee;color:#822e20}.compute-modal{max-height:85dvh;overflow-y:auto}
+.compute-modal label{display:block;margin:12px 0}.compute-modal input{display:block;width:100%;padding:10px;border:1px solid #9eb5c1;border-radius:8px}
+.compute-result details button{white-space:normal;text-align:left;margin-top:12px}.compute-library button:disabled,.compute-modal button:disabled{opacity:.55;cursor:wait}
+.compute-nav,.compute-library,.compute-error{flex-shrink:0}
+.compute-library{padding-bottom:24px}
+.phone-content > .compute-library + .library-page{padding-top:16px}
+.result-insights{padding:12px;color:#203945}.result-insights video{width:100%;margin:12px 0}.result-insights h3{font-size:16px;margin:18px 0 8px}.result-insights p{font-size:14px;line-height:1.5;margin:8px 0}.result-insights section{border-top:1px solid #ccdce4;margin-top:16px}.result-issue{padding:12px 0;border-bottom:1px solid #e1eaf0}.result-issue button{padding:8px 10px;border:1px solid #9bb6c8;border-radius:10px;background:#edf5fa;cursor:pointer}.result-issue button:disabled{opacity:.5;cursor:default}.result-examples{margin-top:20px;padding:12px;background:#f1f3f5;border-radius:10px}.result-examples article{margin-top:12px}.result-insights details p{overflow-wrap:anywhere}

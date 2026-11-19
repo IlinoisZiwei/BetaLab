@@ -1,0 +1,67 @@
+{
+  "history": [
+    {
+      "schema_version": 1,
+      "id": "mock-d63c5ed24c65457dabacb4011a347152",
+      "owner_id": "mock-user",
+      "source_video_id": "demo-trial2",
+      "kind": "analyze",
+      "state": "queued",
+      "stage": "queued",
+      "is_mock": true,
+      "attempt": 1,
+      "retry_of": null,
+      "created_at": "2026-11-19T14:31:55.951594+00:00",
+      "updated_at": "2026-11-19T14:31:55.951596+00:00",
+      "result": null,
+      "error": null
+    },
+    {
+      "schema_version": 1,
+      "id": "mock-d63c5ed24c65457dabacb4011a347152",
+      "owner_id": "mock-user",
+      "source_video_id": "demo-trial2",
+      "kind": "analyze",
+      "state": "running",
+      "stage": "mock_analysis",
+      "is_mock": true,
+      "attempt": 1,
+      "retry_of": null,
+      "created_at": "2026-11-19T14:31:55.951594+00:00",
+      "updated_at": "2026-11-19T14:31:55.951603+00:00",
+      "result": null,
+      "error": null
+    },
+    {
+      "schema_version": 1,
+      "id": "mock-d63c5ed24c65457dabacb4011a347152",
+      "owner_id": "mock-user",
+      "source_video_id": "demo-trial2",
+      "kind": "analyze",
+      "state": "failed",
+      "stage": "failed",
+      "is_mock": true,
+      "attempt": 1,
+      "retry_of": null,
+      "created_at": "2026-11-19T14:31:55.951594+00:00",
+      "updated_at": "2026-11-19T14:31:55.951608+00:00",
+      "result": null,
+      "error": {
+        "code": "WORKER_FAILED",
+        "message": "Example worker failure; no real computation ran.",
+        "retryable": true
+      }
+    }
+  ],
+  "notifications": [
+    {
+      "id": "mock-notification-mock-d63c5ed24c65457dabacb4011a347152",
+      "owner_id": "mock-user",
+      "task_id": "mock-d63c5ed24c65457dabacb4011a347152",
+      "event": "task_failed",
+      "created_at": "2026-11-19T14:31:55.951612+00:00",
+      "read_at": null,
+      "is_mock": true
+    }
+  ]
+}

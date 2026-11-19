@@ -1,0 +1,361 @@
+@layer base {
+  :root {
+    --chalk: #f5f8fc;
+    --charcoal: #20384f;
+    --electric-blue: #285c91;
+    --electric-blue-light: #e1effc;
+    --stone: #d9e4ef;
+    --mid-gray: #5d7083;
+    --surface: #ffffff;
+    color: var(--charcoal);
+    background: var(--chalk);
+  }
+
+  body {
+    color: var(--charcoal);
+    background: var(--chalk);
+  }
+
+  ::selection {
+    color: var(--charcoal);
+    background: var(--electric-blue-light);
+  }
+
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--electric-blue);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .prototype-shell,
+  .phone {
+    background: var(--chalk);
+  }
+
+  .phone {
+    color: var(--charcoal);
+    border-color: var(--stone);
+  }
+
+  .topbar {
+    border-color: var(--stone);
+    background: rgba(242, 248, 253, .96);
+  }
+
+  .btn-solid {
+    border-color: var(--electric-blue);
+    background: var(--electric-blue);
+    color: #fff;
+  }
+
+  .btn-outline {
+    border-color: var(--stone);
+    background: var(--surface);
+    color: var(--charcoal);
+  }
+
+  .btn-text,
+  .back {
+    color: var(--electric-blue);
+  }
+
+  .btn:disabled {
+    border-color: var(--stone);
+    background: var(--stone);
+    color: var(--mid-gray);
+  }
+
+  .segmented button {
+    border-color: var(--stone);
+    background: var(--surface);
+    color: var(--charcoal);
+  }
+
+  .segmented button:last-child {
+    border-color: var(--stone);
+  }
+
+  .segmented .active {
+    border-color: var(--charcoal);
+    background: var(--charcoal);
+    color: #fff;
+  }
+
+  .field input,
+  .field select,
+  .notes textarea,
+  .comments input,
+  .note-editor textarea {
+    border-color: var(--stone);
+    background: var(--surface);
+    color: var(--charcoal);
+  }
+
+  .field input:focus,
+  .field select:focus,
+  .notes textarea:focus,
+  .comments input:focus {
+    border-color: var(--electric-blue);
+    box-shadow: 0 0 0 3px var(--electric-blue-light);
+  }
+
+  .muted,
+  .section-kicker,
+  .workspace-context span,
+  .route-meta,
+  .library-key {
+    color: var(--mid-gray);
+    opacity: 1;
+  }
+
+  .privacy-box,
+  .archive-label,
+  .empty-state,
+  .inline-upload,
+  .inline-action {
+    border-color: var(--stone);
+    background: var(--surface);
+  }
+
+  .home-header,
+  .privacy-note,
+  .workspace-context,
+  .workspace-section,
+  .route-meta,
+  .library-key {
+    border-color: var(--stone);
+  }
+
+  .placeholder {
+    border-color: var(--stone);
+    background: #ebeae5;
+    color: var(--mid-gray);
+  }
+
+  .video-frame > .placeholder,
+  .main-video,
+  .beta-detail-video > .placeholder,
+  .body-video-preview > .placeholder {
+    background: var(--charcoal);
+    color: var(--chalk);
+  }
+
+  .expand-video {
+    border-color: transparent;
+    background: rgba(245, 243, 237, .94);
+    color: var(--charcoal);
+  }
+
+  .playback-toggle {
+    border-color: var(--charcoal);
+    background: var(--charcoal);
+  }
+
+  .play-symbol {
+    border-left-color: var(--chalk);
+  }
+
+  .pause-symbol i {
+    background: var(--chalk);
+  }
+
+  .playback-toggle[aria-pressed='true'] {
+    border-color: var(--electric-blue);
+    background: var(--electric-blue);
+  }
+
+  .player-controls input {
+    accent-color: var(--electric-blue);
+  }
+
+  .player-controls > span {
+    color: var(--mid-gray);
+  }
+
+  .analysis-toggle {
+    border-color: var(--stone);
+    background: var(--surface);
+    color: var(--charcoal);
+  }
+
+  .analysis-toggle > span:last-child {
+    color: var(--electric-blue);
+  }
+
+  .analysis-toggle[aria-expanded='true'] {
+    border-color: var(--electric-blue);
+    background: var(--electric-blue-light);
+    color: var(--charcoal);
+  }
+
+  .analysis-toggle[aria-expanded='true'] > span:last-child {
+    color: var(--electric-blue);
+  }
+
+  .suggestion-text {
+    background: var(--surface);
+    color: var(--charcoal);
+  }
+
+  .suggestion-text > p:first-child {
+    color: var(--charcoal);
+  }
+
+  .technical-term {
+    color: var(--electric-blue);
+    text-decoration-color: var(--electric-blue);
+  }
+
+  .route-card,
+  .video-card,
+  .gym-card,
+  .library-list > button,
+  .attempt-history > button,
+  .beta-video-card,
+  .add-attempt-card {
+    border-color: var(--stone);
+    background: var(--surface);
+  }
+
+  .route-card > .btn {
+    border-color: var(--stone);
+  }
+
+  .route-card > .btn-solid,
+  .card-body .btn-solid {
+    border-color: var(--electric-blue);
+    background: var(--electric-blue-light);
+    color: var(--electric-blue);
+  }
+
+  .add-attempt-card > span,
+  .beta-row .btn-text,
+  .link-row button {
+    color: var(--electric-blue);
+  }
+
+  .beta-video-card > span:last-child,
+  .attempt-history > button > span:last-child,
+  .library-list > button > span:last-child,
+  .gym-card > span:last-child {
+    color: var(--electric-blue);
+  }
+
+  .route-open b {
+    color: var(--charcoal);
+  }
+
+  .beta-video-card small,
+  .attempt-history small,
+  .library-list small,
+  .gym-card small,
+  .route-open small {
+    color: var(--mid-gray);
+  }
+
+  .tabs {
+    border-color: var(--stone);
+  }
+
+  .tabs button {
+    background: transparent;
+    color: var(--mid-gray);
+  }
+
+  .tabs button.active {
+    border-color: var(--electric-blue);
+    color: var(--charcoal);
+  }
+
+  .term-sheet-backdrop,
+  .video-modal-backdrop,
+  .modal-backdrop {
+    background: rgba(25, 26, 28, .45);
+  }
+
+  .term-sheet,
+  .modal {
+    border-color: var(--stone);
+    background: var(--chalk);
+    color: var(--charcoal);
+  }
+
+  .term-sheet .placeholder {
+    background: var(--charcoal);
+    color: var(--chalk);
+  }
+
+  .video-modal {
+    background: var(--charcoal);
+    color: #fff;
+  }
+
+  .video-modal > .placeholder {
+    border-color: #55575a;
+    background: #25272a;
+    color: var(--chalk);
+  }
+
+  .video-modal .btn-text {
+    color: #fff;
+  }
+
+  .video-modal .playback-toggle {
+    border-color: #fff;
+    background: var(--charcoal);
+  }
+
+  .video-modal .playback-toggle[aria-pressed='true'] {
+    border-color: var(--electric-blue);
+    background: var(--electric-blue);
+  }
+
+  .generation-progress {
+    background: var(--electric-blue-light);
+    color: var(--charcoal);
+  }
+
+  .generation-progress > div {
+    background: var(--surface);
+  }
+
+  .generation-progress i {
+    background: var(--electric-blue);
+  }
+
+  .generated-video-meta {
+    color: var(--mid-gray);
+  }
+
+  .toast {
+    border-color: var(--electric-blue);
+    background: var(--electric-blue);
+    color: #fff;
+  }
+
+  @media (hover: hover) {
+    .btn-outline:hover,
+    .gym-card:hover,
+    .route-open:hover,
+    .library-list > button:hover,
+    .attempt-history > button:hover,
+    .beta-video-card:hover {
+      border-color: var(--electric-blue);
+      background: var(--electric-blue-light);
+    }
+
+    .btn-solid:hover {
+      border-color: var(--charcoal);
+      background: var(--charcoal);
+    }
+
+    .btn-text:hover,
+    .technical-term:hover {
+      color: var(--charcoal);
+    }
+  }
+}

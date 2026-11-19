@@ -2,17 +2,20 @@ export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message) }
 }
 
-export async function api<T>(path: string, options: {method?: string; body?: unknown; csrf?: string} = {}): Promise<T> {
+export async function api<T>(path: string, options: {method?: string; body?: unknown; csrf?: string; headers?: Record<string, string>; signal?: AbortSignal} = {}): Promise<T> {
+  const multipart = options.body instanceof FormData
   let response: Response
   try {
     response = await fetch(`/api${path}`, {
       method: options.method ?? "GET",
       credentials: "same-origin",
+      signal: options.signal,
       headers: {
-        ...(options.body !== undefined ? {"Content-Type": "application/json"} : {}),
+        ...options.headers,
+        ...(options.body !== undefined && !multipart ? {"Content-Type": "application/json"} : {}),
         ...(options.csrf ? {"X-CSRF-Token": options.csrf} : {}),
       },
-      ...(options.body !== undefined ? {body: JSON.stringify(options.body)} : {}),
+      ...(options.body !== undefined ? {body: multipart ? options.body as FormData : JSON.stringify(options.body)} : {}),
     })
   } catch { throw new ApiError(0, "Cannot connect. Check your connection and try again.") }
   if (response.status === 204) return undefined as T
