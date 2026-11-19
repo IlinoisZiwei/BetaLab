@@ -1,3 +1,4 @@
+import movementRoutes from "./data/movementRoutes.json"
 import { useMemo, useRef, useState, useEffect } from "react"
 import { api, ApiError, type Session, type Gym, type Route, type UserVideo } from "./api"
 
@@ -10,27 +11,20 @@ type AttemptRecord = {id: string; routeId: string; date: string; duration: strin
 type CommunityFeedVideo = UserVideo & {is_preset_sample?: boolean; is_preset_beta?: boolean}
 
 const gyms = [
-  { name: "Gym A", place: "North District", count: 2 },
+  { name: "Movement Fishtown", place: "North District", count: 1 + movementRoutes.length },
   { name: "Gym B", place: "West District", count: 0 },
 ]
 
 const routes = [
   {
-    gym: "Gym A",
+    gym: "Movement Fishtown",
     id: "r1",
     name: "Corner Study",
     grade: "V3",
     version: "Set 02",
     archived: false,
   },
-  {
-    gym: "Gym A",
-    id: "r2",
-    name: "Long Reach",
-    grade: "V5",
-    version: "Set 01",
-    archived: false,
-  },
+  ...movementRoutes,
 ]
 
 const similarClimbers = [
@@ -43,16 +37,9 @@ const betaCards = [
   {
     id: "b1",
     author: "Nora P.",
-    gym: "Gym A",
+    gym: "Movement Fishtown",
     route: "Corner Study",
     grade: "V3",
-  },
-  {
-    id: "b3",
-    author: "Jo M.",
-    gym: "Gym A",
-    route: "Long Reach",
-    grade: "V5",
   },
 ]
 
@@ -158,12 +145,17 @@ const routeLabel = (idOrName: string) => {
 
 const mediaPath = (name: string) => `${import.meta.env.BASE_URL}media/${name}`
 const routeMedia = (id: string) => {
+  const photo = movementRoutes.find(route => route.id === id)
+  if (photo) {
+    const image = `${import.meta.env.BASE_URL}${photo.image}`
+    return { video: "", poster: image, wall: image, pose: null }
+  }
   const trial = id === "r1" ? 2 : id === "r2" ? 3 : 1
   return { video: mediaPath(`trial${trial}.mp4`), poster: mediaPath(`trial${trial}-poster.jpg`), wall: mediaPath(`wall${trial}.jpg`), pose: trial === 1 ? null : mediaPath(`pose${trial}.mp4`) }
 }
 function MediaImage({routeId, wall = false, className = ""}: {routeId: string; wall?: boolean; className?: string}) {
   const media = routeMedia(routeId)
-  return <img className={`real-media-image ${className}`} src={wall ? media.wall : media.poster} alt={wall ? "Climbing wall and holds" : "Climbing recording preview"} loading="lazy" />
+  return <img className={`real-media-image ${className}`} src={wall ? media.wall : media.poster} alt={movementRoutes.find(route => route.id === routeId)?.name ?? (wall ? "Climbing wall and holds" : "Climbing recording preview")} loading="lazy" />
 }
 function MediaVideo({routeId, pose = false, seekTime, measurementLabel, sourceUrl}: {routeId: string; pose?: boolean; seekTime?: number; measurementLabel?: string; sourceUrl?: string}) {
   const media = routeMedia(routeId)
@@ -173,7 +165,7 @@ function MediaVideo({routeId, pose = false, seekTime, measurementLabel, sourceUr
   const [mediaError,setMediaError]=useState(false)
   useEffect(() => {setPlaying(false);setMediaError(false)}, [src])
   useEffect(() => {if (ref.current && seekTime !== undefined) ref.current.currentTime = seekTime}, [seekTime])
-  if (!src) return <p className="empty-state">No skeleton recording for this route yet.</p>
+  if (!src) return <p className="empty-state">{pose ? "No skeleton recording for this route yet." : "No video for this route yet. Add your climbing video to get started."}</p>
   return <><video ref={ref} key={src} className="real-media-video" src={src} poster={pose ? undefined : media.poster} controls playsInline preload="metadata" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} onError={()=>{setPlaying(false);setMediaError(true)}} />{mediaError && <p role="alert">This video could not be played. Check your connection, or upload an MP4 encoded with H.264.</p>}{measurementLabel && <span className={`video-body-label${playing ? " is-hidden" : ""}`} aria-hidden={playing}>{measurementLabel}</span>}</>
 }
 function VideoThumbnail({src, alt}: {src: string; alt: string}) {
@@ -249,7 +241,7 @@ function App() {
   const [communitySearch, setCommunitySearch] = useState("")
   const [communityGymFilter, setCommunityGymFilter] = useState("All gyms")
   const [communityGradeFilter, setCommunityGradeFilter] = useState("All grades")
-  const [selectedGym, setSelectedGym] = useState("Gym A")
+  const [selectedGym, setSelectedGym] = useState("Movement Fishtown")
   const [selectedRoute, setSelectedRoute] = useState(routes[0])
   const [savedBeta, setSavedBeta] = useState<string[]>([])
   const [wantedRoutes, setWantedRoutes] = useState<string[]>([])
@@ -915,7 +907,7 @@ function App() {
       <div className="gym-list-heading"><h2>{search.trim() ? "Search results" : "Explore gyms"}</h2><span>{gymResults.length} {gymResults.length === 1 ? "gym" : "gyms"}</span></div>
       <div className="card-list gym-selection-list">
         {gymResults.map(gym => <button className="gym-card" type="button" key={gym.name} onClick={() => {setSelectedGym(gym.name);go("gallery")}}>
-          <span className="gym-cover">{gym.name === "Gym A" ? <MediaImage routeId="r1" wall /> : <span className="gym-cover-placeholder"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 20 7-15 4 8 2-4 5 11H3Z"/><path d="m7 11 3 2 2-2"/></svg><span>No photo yet</span></span>}</span>
+          <span className="gym-cover">{gym.name === "Movement Fishtown" ? <MediaImage routeId={movementRoutes[0].id} wall /> : <span className="gym-cover-placeholder"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 20 7-15 4 8 2-4 5 11H3Z"/><path d="m7 11 3 2 2-2"/></svg><span>No photo yet</span></span>}</span>
           <span className="gym-card-info"><b>{gym.name}</b><span className="gym-area">{gym.place}</span><span className={`gym-route-count${gym.count === 0 ? " is-empty" : ""}`}>{gym.count > 0 ? `${gym.count} active routes` : "No routes yet"}</span></span>
           <span className="gym-card-chevron" aria-hidden="true">›</span>
         </button>)}
@@ -927,6 +919,7 @@ function App() {
   const galleryScreen = (
     <main className="screen with-header route-gallery-page">
       <header className="route-gallery-intro"><h1>{selectedGym}</h1>
+      <p>{catalogRoutes.filter(route => route.id !== "r2" && route.gym === selectedGym).length} routes · Select a route to see the full wall</p>
       <div className="gallery-tools">
         <SelectField
           label="Grade"
@@ -934,9 +927,7 @@ function App() {
           onChange={setGradeFilter}
         >
           <option>All grades</option>
-          <option>V2</option>
-          <option>V3</option>
-          <option>V5</option>
+          {[...new Set(catalogRoutes.filter(route => route.id !== "r2" && route.gym === selectedGym).map(route => route.grade))].sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(grade => <option key={grade}>{grade}</option>)}
         </SelectField>
       </div>
       </header>
@@ -962,12 +953,12 @@ function App() {
         </section>
       )}
 
-      {catalog && !catalogRoutes.some(r => r.gym === selectedGym) && <div className="empty-state"><strong>No route footage yet</strong><p>We are collecting routes for this gym. Browse Gym A for the available samples.</p></div>}
+      {catalog && !catalogRoutes.some(r => r.gym === selectedGym) && <div className="empty-state"><strong>No route footage yet</strong><p>We are collecting routes for this gym. Browse Movement Fishtown for the available samples.</p></div>}
       <div className="card-list route-list">
         {catalogRoutes
           .filter(
             (route) =>
-              route.gym === selectedGym && (gradeFilter === "All grades" || route.grade === gradeFilter),
+              route.id !== "r2" && route.gym === selectedGym && (gradeFilter === "All grades" || route.grade === gradeFilter),
           )
           .map((route) => (
             <article className="route-card" key={route.id}>
@@ -978,7 +969,7 @@ function App() {
               >
                 <MediaImage routeId={route.id} wall />
                 <span>
-                  <b>{route.gym}</b>
+                  <b>{route.name}</b>
                   <span className="gallery-route-meta"><span className="gallery-grade">{route.grade}</span></span>
                   {route.archived && route.showArchiveBadge !== false && (
                     <em>Archived route</em>
@@ -1022,7 +1013,9 @@ function App() {
       {selectedRoute.archived && (
         <p className="archive-label">Archived — available for past attempts</p>
       )}
+      <h2 className="route-photo-title">{selectedRoute.name}</h2>
       <MediaImage routeId={selectedRoute.id} wall className="route-image" />
+      {movementRoutes.find(route => route.id === selectedRoute.id)?.reviewNote && <p className="route-photo-note">Highlighted holds are awaiting route confirmation.</p>}
       <button
         className="add-attempt-card"
         type="button"
@@ -1126,7 +1119,7 @@ function App() {
             <AppButton
               className="generate-entry"
               onClick={() => {
-                if (selectedRoute.id !== "r1") { flash("Live generation currently supports Gym A V3 · Trial 2 only"); return }
+                if (selectedRoute.id !== "r1") { flash("Live generation currently supports Movement Fishtown V3 · Trial 2 only"); return }
                 if (profile.height && profile.wingspan) setConfirmBody(true)
                 else setMeasurementPrompt(true)
               }}
@@ -1536,7 +1529,7 @@ function App() {
                 resetBodyPreview()
                 go("beta")
               } else {
-                setSelectedRoute(routes.find(route => route.id === item.id) ?? routes[0]); setSelectedGym(routes.find(route => route.id === item.id)?.gym ?? "Gym A")
+                setSelectedRoute(routes.find(route => route.id === item.id) ?? routes[0]); setSelectedGym(routes.find(route => route.id === item.id)?.gym ?? "Movement Fishtown")
                 openWorkspace(
                   `${item.meta} — ${item.label}`,
                   "attempt",
@@ -1590,7 +1583,7 @@ function App() {
     <div className="prototype-shell">
       <div className="phone">
         <div className="phone-content" onPointerDown={event=>{
-          if(event.pointerType!=="mouse" || event.button!==0 || (event.target as HTMLElement).closest('input,textarea,select,video'))return
+          if(event.pointerType!=="mouse" || event.button!==0 || (event.target as HTMLElement).closest('button,a,input,textarea,select,video,summary'))return
           globalSwipeStart.current={x:event.clientX,y:event.clientY,pointerId:event.pointerId}
           event.currentTarget.setPointerCapture(event.pointerId)
         }} onPointerUp={event=>{
