@@ -1,4 +1,5 @@
 """Browser review acceptance using precomputed real new-video inputs, no refit."""
+import re
 import copy
 import json
 import os
@@ -36,7 +37,7 @@ class InputBrowserTest(unittest.TestCase):
             page.goto('http://127.0.0.1:5177')
             page.get_by_label('Username',exact=True).fill('phase2alice');page.get_by_label('Password',exact=True).fill('phase2-local-test-only')
             page.get_by_role('button',name='Sign in',exact=True).last.click()
-            page.get_by_role('button',name='My skeletons',exact=True).click()
+            page.get_by_role('button',name=re.compile(r'^My Library(?: |$)')).click();page.get_by_role('button',name='My skeletons',exact=True).click()
             page.get_by_role('button',name='Source analysis · Completed',exact=False).first.click()
             panel=page.get_by_label('New video inputs',exact=True);expect(panel).to_be_visible()
             expect(page.get_by_label('Input reference video',exact=True)).to_be_visible()
@@ -78,7 +79,7 @@ class InputBrowserTest(unittest.TestCase):
             self.assertAlmostEqual(page.get_by_label('Contact reference video', exact=True).evaluate('(v) => v.currentTime'), 3/summary['fps'], places=2)
             page.get_by_label('Limb 1', exact=True).scroll_into_view_if_needed()
             page.screenshot(path=str(self.output/'input-review-mobile.png'),full_page=True)
-            page.reload();page.get_by_role('button',name='My skeletons',exact=True).click()
+            page.reload();page.get_by_role('button',name=re.compile(r'^My Library(?: |$)')).click();page.get_by_role('button',name='My skeletons',exact=True).click()
             page.get_by_role('button',name='Source analysis · Completed',exact=False).first.click()
             expect(panel).to_contain_text('1 / 1 selected holds')
             expect(page.get_by_label('Limb 1', exact=True)).to_have_value('left_foot')

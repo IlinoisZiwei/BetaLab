@@ -1,4 +1,5 @@
 """Global alignment editor uses synthetic measured geometry, never real-video claims."""
+import re
 import json
 import os
 import unittest
@@ -27,7 +28,7 @@ class WorldBrowserTest(unittest.TestCase):
             page.get_by_label('Username',exact=True).fill('phase2alice')
             page.get_by_label('Password',exact=True).fill('phase2-local-test-only')
             page.get_by_role('button',name='Sign in',exact=True).last.click()
-            page.get_by_role('button',name='My skeletons',exact=True).click()
+            page.get_by_role('button',name=re.compile(r'^My Library(?: |$)')).click();page.get_by_role('button',name='My skeletons',exact=True).click()
             page.get_by_role('button',name='Source analysis · Completed',exact=False).first.click()
             panel = page.get_by_label('Global wall alignment',exact=True)
             expect(panel).to_be_visible()
@@ -46,7 +47,7 @@ class WorldBrowserTest(unittest.TestCase):
             page.get_by_label('Reference camera reprojection',exact=True).scroll_into_view_if_needed()
             page.screenshot(path=str(self.output/'world-review-mobile.png'),full_page=True)
             page.reload()
-            page.get_by_role('button',name='My skeletons',exact=True).click()
+            page.get_by_role('button',name=re.compile(r'^My Library(?: |$)')).click();page.get_by_role('button',name='My skeletons',exact=True).click()
             page.get_by_role('button',name='Source analysis · Completed',exact=False).first.click()
             expect(panel).to_contain_text('4 / 4 camera-aligned frames')
             page.set_viewport_size({'width':1440,'height':1000})

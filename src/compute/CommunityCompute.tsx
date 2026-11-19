@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { api, type Session } from '../api'
 import { ResultInsights } from './ResultInsights'
 import type { Body, Task, Note } from './results'
@@ -9,18 +9,19 @@ type Source = { source_analysis_id: string; source_analysis_version: string; is_
   original_body?: Body; baseline_status: string; quality: { warnings: string[] } }
 export type ComputeVideo = { id: string; title: string; display_name?: string; username?: string;
   is_preset_sample?: boolean; is_preset_beta?: boolean }
-type Props = { session: Session; source: ComputeVideo | null; closeSource: () => void; library: boolean; openLibrary: () => void }
+type Props = { session: Session; source: ComputeVideo | null; closeSource: () => void; library: boolean; openLibrary: () => void; renderLibrary?: (content: ReactNode) => ReactNode }
 const stateLabel: Record<string, string> = { queued: 'Queued', running: 'Generating', succeeded: 'Completed', failed: 'Failed' }
 const dimensions = (body?: Body) => body ? `${body.height_cm} cm height · ${body.arm_span_cm} cm arm span (${body.provenance === 'estimated' ? 'estimated' : 'provided'})` : 'Measurements unavailable'
 
 // Mounted once per signed-in user. Tasks live on the server, independently of pages.
-export function CommunityCompute({ session, source, closeSource, library, openLibrary }: Props) {
+export function CommunityCompute({ session, source, closeSource, library, openLibrary, renderLibrary = content => content }: Props) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [notes, setNotes] = useState<Note[]>([])
   const [unread, setUnread] = useState(0)
   const [taskCursor, setTaskCursor] = useState<string | null>(null)
   const [noteCursor, setNoteCursor] = useState<string | null>(null)
   const [selected, setSelected] = useState<Task | null>(null)
+  const [showTasks, setShowTasks] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
   const [reference, setReference] = useState<Source | null>(null)
   const [sourceError, setSourceError] = useState('')
@@ -102,12 +103,12 @@ export function CommunityCompute({ session, source, closeSource, library, openLi
       source_analysis_id: reference.source_analysis_id, source_analysis_version: reference.source_analysis_version,
       target_body: { height_cm: Number(height), arm_span_cm: Number(span), provenance: 'user_input' }, compare_techniques: false })
     if (!alive.current) return
-    setTasks(old => [task, ...old.filter(t => t.id !== task.id)]); setSelected(task); closeSource(); openLibrary()
+    setTasks(old => [task, ...old.filter(t => t.id !== task.id)]); setSelected(task); setShowTasks(true); closeSource(); openLibrary()
   }
   async function openTask(id: string) {
     setSelected(null)
     const task = await api<Task>('/tasks/' + id)
-    if (alive.current) { setSelected(task); openLibrary() }
+    if (alive.current) { setSelected(task); setShowTasks(true); openLibrary() }
   }
   async function more(kind: 'tasks' | 'notifications') {
     const cursor = kind === 'tasks' ? taskCursor : noteCursor
@@ -123,9 +124,13 @@ export function CommunityCompute({ session, source, closeSource, library, openLi
   const result = selected?.result
   const validBody = Number(height) >= 100 && Number(height) <= 230 && Number(span) >= 80 && Number(span) <= 260
   return <>
-    <div className="compute-nav"><button onClick={openLibrary}>My skeletons</button><button onClick={() => setShowNotes(true)}>Notifications{unread > 0 ? ` (${unread})` : ''}</button></div>
+    {library && renderLibrary(<>
+    <nav className="compute-nav" aria-label="Library tools">
+      <button aria-expanded={showTasks} aria-controls="library-skeletons" onClick={() => setShowTasks(true)}>My skeletons</button>
+      <button onClick={() => setShowNotes(true)}>Notifications{unread > 0 ? ` (${unread})` : ''}</button>
+    </nav>
     {error && <p className="compute-error" role="alert">{error} <button onClick={() => setError('')}>Dismiss</button></p>}
-    {library && <section className="compute-library" aria-label="My skeletons">
+    {showTasks && <section id="library-skeletons" className="compute-library" aria-label="My skeletons">
       <h2>My skeletons</h2><p>Personal results and background tasks. You can leave this page while generation runs.</p>
       {!tasks.length && <p>No tasks yet. Open a Community video to generate your own skeleton.</p>}
       {tasks.map(task => <button className="compute-row" key={task.id} onClick={() => void action(() => openTask(task.id))}>
@@ -146,6 +151,7 @@ export function CommunityCompute({ session, source, closeSource, library, openLi
         </>}
       </article>}
     </section>}
+    </>)}
     {source && <div className="modal-backdrop"><section className="modal compute-modal" role="dialog" aria-modal="true" aria-label="Generate personal skeleton">
       <h2>Generate your skeleton</h2>{error && <p role="alert">{error}</p>}<p>{source.title} · {source.display_name || source.username || 'Original climber'}</p>
       {sourceError ? <p role="status">{sourceError}</p> : !reference ? <p>Checking source analysis…</p> : <>

@@ -39,7 +39,6 @@ function App() {
   const routeScreen = <RoutePage {...pages.routeScreen} />
   const betaDetailScreen = <BetaPage {...pages.betaDetailScreen} />
   const workspaceScreen = <WorkspacePage {...pages.workspaceScreen} />
-  const libraryScreen = <LibraryPage {...pages.libraryScreen} />
   const screens: Record<Screen, React.ReactNode> = {
     home,
     account: accountScreen,
@@ -51,7 +50,7 @@ function App() {
     route: routeScreen,
     workspace: workspaceScreen,
     beta: betaDetailScreen,
-    library: libraryScreen,
+    library: null,
   }
   return (
     <div className="prototype-shell">
@@ -99,6 +98,7 @@ function App() {
               source={computeVideo}
               closeSource={() => setComputeVideo(null)}
               library={screen === "library"}
+              renderLibrary={(content) => <LibraryPage {...pages.libraryScreen} computeContent={content} />}
               openLibrary={() => {
                 if (screen !== "library") go("library")
                 requestAnimationFrame(() =>

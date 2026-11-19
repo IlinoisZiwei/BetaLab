@@ -1,9 +1,11 @@
+import type { ReactNode } from "react"
 import { AttemptRecord, routes, betaCards, AppButton, routeLabel, routeMedia, MediaImage, VideoThumbnail } from "../shared"
 import type { AppController } from "../useAppController"
 
-type Props = AppController["pages"]["libraryScreen"]
+type Props = AppController["pages"]["libraryScreen"] & { computeContent?: ReactNode }
 
 export function LibraryPage({
+  computeContent,
   libraryTab,
   setLibraryTab,
   catalogGyms,
@@ -24,6 +26,7 @@ export function LibraryPage({
 }: Props) {
   return (
     <main className="screen with-header library-page">
+      {computeContent}
       <div className="tabs library-tabs">
         <button
           className={libraryTab === "attempts" ? "active" : ""}

@@ -163,6 +163,8 @@ npm run dev -- --host 127.0.0.1 --port 5173
 
 - **上传：**选择路线 → Add my video → 标题和 Private/Public → 上传。保存与分析提交是两个独立操作；分析失败不会删除视频。刷新可以恢复任务；若提交未到达服务器，可显示 Start analysis。重试创建新 attempt。
 - **Community：**已登录用户可浏览公开用户视频。Community Beta 筛选 `share_as_beta=true` 的公开视频；该主动分享允许显示上传者身材作比较。预置 sample 仍是示例，不是用户上传记录。
+My skeletons 和 Notifications 入口仅位于 My Library 内的收藏分类上方。点击 My skeletons 展开历史任务；从 Community 提交生成后仍会自动打开对应任务。其他页面继续后台轮询，但不再显示占用首页布局的工具栏。
+
 - **个人骨架：**打开真实 Community 视频 → Generate beta → 获取该视频的源分析 → 输入身高臂展 → 提交 → My Library / My skeletons → 通知或已保存结果。请求绑定实际视频与分析版本，不用同路线其他视频替代。目前仅支持已有 Trial2 源分析的诊断生成。
 - **新视频核查：**输入准备完成后打开 New video inputs → 查看候选和参考图 → 核查标定 → 保存。输入完成不解锁个人生成。
 - **结果：**示例建议单独展示；真实诊断时间点跳转到当前任务视频。个人产物保持私有，访问仍依赖原视频权限。

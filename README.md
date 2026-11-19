@@ -163,6 +163,8 @@ For LAN testing, bind Vite to `0.0.0.0`, add the exact LAN origin to `APP_ORIGIN
 
 - **Upload:** choose a route → Add my video → title and Private/Public → upload. Saving and analysis submission are separate operations: an analysis failure does not delete the video. Refresh can recover the task or offer Start analysis if submission never reached the server. Retry creates a new attempt.
 - **Community:** public user videos are browsable by signed-in users. Community Beta filters public videos with `share_as_beta=true`; that opt-in exposes uploader measurements for comparison. Bundled samples remain examples, not uploaded records.
+My skeletons and Notifications are available only inside My Library, above the collection tabs. Opening My skeletons reveals saved tasks; Community generation still opens the selected task automatically. Background polling continues on other pages without adding a toolbar to the home layout.
+
 - **Personal skeleton:** open an actual Community video → Generate beta → retrieve its source analysis → enter height and arm span → submit → My Library / My skeletons → notification or saved result. Requests bind to the actual video and analysis version, never a substitute from the same route. Currently only the supported Trial2 analysis can seed this diagnostic flow.
 - **New-video review:** after input preparation, open New video inputs → inspect candidates and reference image → review calibration → save. Input completion does not unlock personal generation.
 - **Results:** example suggestions are isolated; real diagnostic moments seek within their own task video. Personal outputs stay private and continue to depend on access to the source video.

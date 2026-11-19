@@ -71,7 +71,7 @@ class UploadBrowserTest(unittest.TestCase):
             expect(panel).to_contain_text('Analysis completed',timeout=10000)
             expect(panel).to_contain_text('Baseline: failed')
             page.screenshot(path=str(self.output/'upload-analysis-completed.png'),full_page=True)
-            page.reload();page.get_by_role('button',name='My skeletons',exact=True).click()
+            page.reload();page.get_by_role('button',name=re.compile(r'^My Library(?: |$)')).click();page.get_by_role('button',name='My skeletons',exact=True).click()
             page.get_by_role('button',name=re.compile('Source analysis · Completed')).click()
             expect(page.get_by_label('Source analysis video',exact=True)).to_be_visible()
             self.assertEqual(self.alice.get('/api/tasks/upload-analysis/'+video_id).status_code,404)
@@ -97,7 +97,7 @@ class UploadBrowserTest(unittest.TestCase):
                 page.get_by_role('button',name='Upload video',exact=True).click()
             auto_task=automatic.value.json();self.assertEqual(automatic.value.status,202)
             expect(panel).to_contain_text('Analysis queued')
-            page.reload();page.get_by_role('button',name='My skeletons',exact=True).click()
+            page.reload();page.get_by_role('button',name=re.compile(r'^My Library(?: |$)')).click();page.get_by_role('button',name='My skeletons',exact=True).click()
             expect(page.get_by_role('button',name=re.compile('Source analysis · Queued')).first).to_be_visible()
             (self.output/'upload-validation.json').write_text(json.dumps(dict(
                 source_diagnostics_rerun=False,completion='verified precomputed v5 fixture',
