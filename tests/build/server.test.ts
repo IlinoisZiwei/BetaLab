@@ -35,7 +35,7 @@ test('extracted Vite plugins retain dev HTML, kit, API proxy and private-file de
     const stories = await fetch(base + '/@id/__x00__virtual:figma-stories')
     assert.equal(stories.status, 200)
     assert.ok((await stories.text()).includes('export const stories'))
-    for (const prefix of ['auth/me', 'profile', 'gyms', 'routes', 'tasks', 'notifications', 'videos']) {
+    for (const prefix of ['auth/me', 'profile', 'gyms', 'routes', 'tasks', 'notifications', 'videos', 'comments/x', 'me/saved-videos', 'social/videos', 'users/x/follow']) {
       assert.deepEqual(await (await fetch(base + '/api/' + prefix)).json(), { path: '/api/' + prefix })
     }
     for (const route of ['/backend/compute/runs/' + path.basename(privateFile), '/@fs' + privateFile]) {

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { AttemptRecord, routes, betaCards, AppButton, routeLabel, routeMedia, MediaImage, VideoThumbnail } from "../shared"
+import { AttemptRecord, routes, AppButton, routeLabel, routeMedia, MediaImage, VideoThumbnail } from "../shared"
 import type { AppController } from "../useAppController"
 
 type Props = AppController["pages"]["libraryScreen"] & { computeContent?: ReactNode }
@@ -20,9 +20,8 @@ export function LibraryPage({
   go,
   libraryItems,
   openRoute,
-  setWorkspaceBetaId,
-  setBetaOrigin,
-  openWorkspace,
+  savedVideos,
+  openSavedSample,
 }: Props) {
   return (
     <main className="screen with-header library-page">
@@ -230,43 +229,42 @@ export function LibraryPage({
                     setWorkspaceSource(video.title)
                     go("workspace")
                   }
-                } else if (item.meta === "Saved community beta") {
-                  const savedCard = betaCards.find(
-                    (card) => card.id === item.id,
-                  )
-                  const savedRoute =
-                    routes.find((route) => route.name === savedCard?.route) ??
-                    routes[0]
-                  setSelectedRoute(savedRoute)
-                  setSelectedGym(savedRoute.gym)
-                  setWorkspaceBetaId(item.id)
-                  setBetaOrigin("community")
-                  go("beta")
-                } else {
-                  setSelectedRoute(
-                    routes.find((route) => route.id === item.id) ?? routes[0],
-                  )
-                  setSelectedGym(
-                    routes.find((route) => route.id === item.id)?.gym ??
-                      "Movement Fishtown",
-                  )
-                  openWorkspace(
-                    `${item.meta} — ${item.label}`,
-                    "attempt",
-                    item.id,
-                  )
+                } else if (item.target === "saved") {
+                  // B2.7: a saved Community video opens in the workspace like a route Beta;
+                  // a saved bundled sample opens where it lives (Community viewer or Beta page).
+                  const video = savedVideos.find((entry) => entry.id === item.id)
+                  if (video?.is_preset_sample) {
+                    openSavedSample(video)
+                    return
+                  }
+                  const route =
+                    catalogRoutes.find((entry) => entry.id === item.routeId) ??
+                    routes.find((entry) => entry.id === item.routeId)
+                  if (video && route) {
+                    setSelectedRoute(route)
+                    setSelectedGym(route.gym)
+                    setActiveAttemptId(video.id)
+                    setHasAttempt(true)
+                    setWorkspaceEntry("attempt")
+                    setWorkspaceSource(video.title)
+                    go("workspace")
+                  }
                 }
               }}
             >
-              <MediaImage
-                routeId={
-                  item.target === "route"
-                    ? item.id
-                    : (routes.find((route) => route.name === item.label)?.id ??
-                      "r1")
-                }
-                wall={item.target === "route"}
-              />
+              {item.target === "saved" ? (
+                <VideoThumbnail src={item.contentUrl} alt={`${item.label} first frame`} />
+              ) : (
+                <MediaImage
+                  routeId={
+                    item.target === "route"
+                      ? item.id
+                      : (routes.find((route) => route.name === item.label)?.id ??
+                        "r1")
+                  }
+                  wall={item.target === "route"}
+                />
+              )}
               <span>
                 <b>{routeLabel(item.label)}</b>
                 <small>{item.meta}</small>

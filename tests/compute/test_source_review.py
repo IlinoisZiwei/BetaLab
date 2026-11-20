@@ -135,7 +135,7 @@ class SourceReviewTest(unittest.TestCase):
         q,e,scene=self.fixture();e['ground'][:,2]=True
         moments=diagnostic_moments(e,self.np.zeros((4,4)))
         self.assertEqual(len(moments),1)
-        self.assertEqual(moments[0]['title'],'地面几何未验证')
+        self.assertEqual(moments[0]['title'],'Ground geometry not verified')
         self.assertEqual(moments[0]['end_frame'],3)
 
     def test_reach_bound_contains_generated_contact_distances(self):

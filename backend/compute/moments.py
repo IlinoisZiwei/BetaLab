@@ -20,8 +20,8 @@ def build_moments(known,trusted,gaps=None,fps=30):
     for limb,name in enumerate(LIMBS):
         for first,last in runs([bool(k[limb] and not t[limb]) for k,t in zip(known,trusted)]):
             moments.append(dict(id=f'uncertain-{name}-{first}',kind='unconfirmed_contact',frame=first,end_frame=last,
-                at_seconds=first/fps,limb=name,title='接触证据不足',
-                explanation='原接触候选缺少支持证据；请对照录像核查，暂不提供技巧建议。',media='video',gap_cm=None))
+                at_seconds=first/fps,limb=name,title='Insufficient contact evidence',
+                explanation='This contact candidate has no supporting evidence. Check it against the recording; no technique advice is given.',media='video',gap_cm=None))
     if gaps is not None:
         candidates=[]
         for limb,name in enumerate(LIMBS):
@@ -29,7 +29,7 @@ def build_moments(known,trusted,gaps=None,fps=30):
             for first,last in runs(mask):
                 peak=max(range(first,last+1),key=lambda f:gaps[f][limb])
                 candidates.append(dict(id=f'gap-{name}-{first}',kind='contact_gap',frame=peak,end_frame=last,
-                    at_seconds=peak/fps,limb=name,title='骨架接触偏差',gap_cm=float(gaps[peak][limb]),media='video',
-                    explanation=f'模型接触点与候选岩点相差 {gaps[peak][limb]:.1f} cm；这是模型诊断，并非实际攀爬动作评价。'))
+                    at_seconds=peak/fps,limb=name,title='Skeleton contact offset',gap_cm=float(gaps[peak][limb]),media='video',
+                    explanation=f'The model contact point is {gaps[peak][limb]:.1f} cm from the candidate hold. This is a model diagnostic, not an assessment of the actual climb.'))
         moments += sorted(candidates,key=lambda m:m['gap_cm'],reverse=True)[:8]
     return sorted(moments,key=lambda m:(m['frame'],m['limb']))

@@ -1,5 +1,7 @@
 import { useCatalog } from "../features/catalog/useCatalog"
 import { useComments } from "../features/community/useComments"
+import { useSocial } from "../features/community/useSocial"
+import { isSavedUpload } from "../features/community/social"
 import { useUpload } from "../features/videos/useUpload"
 import { useVideoLibrary } from "../features/videos/useVideoLibrary"
 import { useNavigation } from "./hooks/useNavigation"
@@ -14,6 +16,38 @@ import { api, type UserVideo } from "../api"
 import { Screen, LibraryTab, WorkspaceEntry, BetaOrigin, AttemptRecord, CommunityFeedVideo, routes, similarClimbers, betaCards, routeMedia } from "./shared"
 
 // Coordinates feature hooks and cross-page transitions; page markup lives in pages/.
+
+/** A bundled preset Beta video for a sample climber ("b1"), as Community shows it. */
+function presetBetaVideo(climberId: string): CommunityFeedVideo {
+  const card = betaCards.find((item) => item.id === climberId)
+  const climber = similarClimbers.find((item) => item.id === climberId)
+  const author = card?.author ?? climber?.name ?? "BetaLab climber"
+  const route =
+    (card && routes.find((item) => item.name === card.route && item.gym === card.gym)) ?? routes[0]
+  const [minutes, seconds] = (climber?.time ?? "0:00").split(":").map(Number)
+  return {
+    id: `preset-beta-${climberId}`,
+    owner_id: "preset",
+    route_id: route?.id ?? "r1",
+    visibility: "public",
+    share_as_beta: true,
+    original_name: `${author} beta.mp4`,
+    title: `${author}'s beta`,
+    description: climber?.bio || climber?.cue || "",
+    media_type: "video/mp4",
+    size_bytes: 0,
+    duration_seconds: (minutes || 0) * 60 + (seconds || 0),
+    created_at: new Date("2025-05-14T12:00:00Z").toISOString(),
+    content_url: routeMedia(route?.id ?? "r1").video,
+    username: author.toLowerCase().replace(/[^a-z0-9]+/g, ""),
+    display_name: author,
+    height_cm: climber?.height ?? null,
+    arm_span_cm: climber?.wingspan ?? null,
+    is_preset_sample: true,
+    is_preset_beta: true,
+  }
+}
+
 export function useAppController() {
   const {
     screen,
@@ -33,8 +67,6 @@ export function useAppController() {
   const [communityGradeFilter, setCommunityGradeFilter] = useState("All grades")
   const [selectedGym, setSelectedGym] = useState("Movement Fishtown")
   const [selectedRoute, setSelectedRoute] = useState(routes[0])
-  const [savedBeta, setSavedBeta] = useState<string[]>([])
-  const [wantedRoutes, setWantedRoutes] = useState<string[]>([])
   const [sampleAttempts, setAttemptRecords] = useState<AttemptRecord[]>([
     {
       id: "a1",
@@ -71,7 +103,6 @@ export function useAppController() {
     useState<WorkspaceEntry>("attempt")
   const [workspaceBetaId, setWorkspaceBetaId] = useState("b1")
   const [betaOrigin, setBetaOrigin] = useState<BetaOrigin>("workspace")
-  const [likedBeta, setLikedBeta] = useState<string[]>([])
   const [hasAttempt, setHasAttempt] = useState(true)
   const [cueTime, setCueTime] = useState(7)
   const jumpToCueTime = (time: number) => {
@@ -89,6 +120,8 @@ export function useAppController() {
   const [expandedCommunityDescription, setExpandedCommunityDescription] =
     useState<string | null>(null)
   const [communityVideoId, setCommunityVideoId] = useState<string | null>(null)
+  // N2.8: whose page the author screen shows.
+  const [authorId, setAuthorId] = useState<string | null>(null)
   const globalSwipeStart = useRef<{
     x: number
     y: number
@@ -136,14 +169,7 @@ export function useAppController() {
         records.filter((record) => /^a[0-9]+$/.test(record.id)),
       )
       setJobs({})
-      setSavedBeta([])
-      setLikedBeta([])
-      setWantedRoutes([])
-      setComments([])
-      setCommentDrafts({})
-      setReplyDrafts({})
-      setReplyTargets({})
-      setExpandedReplies([])
+      resetSocial()
       setManageMode(null)
       setHasAttempt(false)
       setActiveAttemptId("")
@@ -222,26 +248,61 @@ export function useAppController() {
     },
   })
   const {
-    renderComments,
-    setComments,
-    setCommentDrafts,
-    setReplyDrafts,
-    setReplyTargets,
-    setExpandedReplies,
-  } = useComments({ signedIn, profile, go, setAccountMode })
-  const {
     myVideos,
     publicVideos,
     routeBetaVideos,
     syncVideo,
     removeVideo,
     resetVideos,
+    publicHasMore,
+    publicLoading,
+    publicError,
+    loadMorePublic,
+    retryPublic,
+    refreshPublic,
   } = useVideoLibrary({
     session,
     screen,
     routeId: selectedRoute.id,
     onError: setCatalogError,
   })
+  const expireSession = () => {
+    applySession(null)
+    setAuthError("Your session expired. Please sign in again.")
+  }
+  const {
+    social,
+    savedVideos,
+    wantedRoutes,
+    danmakuOn,
+    following,
+    toggleFollow,
+    toggleSocial,
+    toggleWanted,
+    updateCommentCount,
+    shareVideo,
+    toggleDanmaku,
+    forgetVideo,
+    reset: resetSocial,
+  } = useSocial({
+    session,
+    authEpoch,
+    flash,
+    onExpired: expireSession,
+    visibleVideos: [...myVideos, ...publicVideos, ...routeBetaVideos],
+    onOpenShared: (id, video) => {
+      setCommunityVideoId(id)
+      go("communityVideo")
+      void refreshPublic(video ?? undefined)
+    },
+  })
+  const { renderComments } = useComments({
+    session,
+    onExpired: expireSession,
+    onCountChange: updateCommentCount,
+  })
+  // Saved uploads carry full video fields; saved samples are resolved from the feed below.
+  const savedUploads = savedVideos.filter(isSavedUpload)
   const attempts = [...new Set(myVideos.map((video) => video.route_id))]
   const attemptRecords: AttemptRecord[] = [
     ...myVideos.map((video) => ({
@@ -257,7 +318,7 @@ export function useAppController() {
       (record) => !myVideos.some((video) => video.id === record.id),
     ),
   ]
-  const activeVideo = [...myVideos, ...publicVideos, ...routeBetaVideos].find(
+  const activeVideo = [...myVideos, ...publicVideos, ...routeBetaVideos, ...savedUploads].find(
     (video) => video.id === activeAttemptId,
   )
   const activeAttempt = activeVideo
@@ -317,17 +378,6 @@ export function useAppController() {
     go("workspace")
   }
 
-  const toggle = (
-    id: string,
-    values: string[],
-    update: (next: string[]) => void,
-  ) => {
-    update(
-      values.includes(id)
-        ? values.filter((value) => value !== id)
-        : [...values, id],
-    )
-  }
 
   const pageTitle: Record<Screen, string> = {
     home: "BetaLab",
@@ -341,6 +391,7 @@ export function useAppController() {
     workspace: "Beta Workspace",
     beta: "Community Beta",
     library: "My Library",
+    author: "Climber",
   }
 
   const communitySampleVideos: CommunityFeedVideo[] = useMemo(
@@ -375,37 +426,7 @@ export function useAppController() {
     [attemptRecords, myVideos],
   )
   const communityPresetBetaVideos: CommunityFeedVideo[] = useMemo(
-    () =>
-      betaCards.map((card) => {
-        const climber = similarClimbers.find((item) => item.id === card.id)
-        const route = routes.find(
-          (item) => item.name === card.route && item.gym === card.gym,
-        )
-        const [minutes, seconds] = (climber?.time ?? "0:00")
-          .split(":")
-          .map(Number)
-        return {
-          id: `preset-beta-${card.id}`,
-          owner_id: "preset",
-          route_id: route?.id ?? "r1",
-          visibility: "public",
-          share_as_beta: true,
-          original_name: `${card.author} beta.mp4`,
-          title: `${card.author}'s beta`,
-          description: climber?.bio || climber?.cue || "",
-          media_type: "video/mp4",
-          size_bytes: 0,
-          duration_seconds: (minutes || 0) * 60 + (seconds || 0),
-          created_at: new Date("2025-05-14T12:00:00Z").toISOString(),
-          content_url: routeMedia(route?.id ?? "r1").video,
-          username: card.author.toLowerCase().replace(/[^a-z0-9]+/g, ""),
-          display_name: card.author,
-          height_cm: climber?.height ?? null,
-          arm_span_cm: climber?.wingspan ?? null,
-          is_preset_sample: true,
-          is_preset_beta: true,
-        }
-      }),
+    () => betaCards.map((card) => presetBetaVideo(card.id)),
     [],
   )
   const communityVideos: CommunityFeedVideo[] = useMemo(
@@ -417,6 +438,43 @@ export function useAppController() {
       ].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)),
     [publicVideos, communitySampleVideos, communityPresetBetaVideos],
   )
+  // Saved items resolved for My Library: uploads as returned, samples from the bundled feed.
+  const savedLibraryVideos: (CommunityFeedVideo & { saved_at: string })[] = useMemo(
+    () =>
+      savedVideos.flatMap((video): (CommunityFeedVideo & { saved_at: string })[] => {
+        if (isSavedUpload(video)) return [video]
+        const sample =
+          communitySampleVideos.find((item) => item.id === video.id) ??
+          (video.id.startsWith("preset-beta-")
+            ? presetBetaVideo(video.id.slice("preset-beta-".length))
+            : undefined)
+        return sample ? [{ ...sample, saved_at: video.saved_at }] : []
+      }),
+    [savedVideos, communitySampleVideos],
+  )
+  const openAuthor = (video: CommunityFeedVideo) => {
+    if (video.is_preset_sample || video.owner_id === "preset") {
+      flash("This is a BetaLab sample video, so it has no climber page.")
+      return
+    }
+    setAuthorId(video.owner_id)
+    go("author")
+  }
+  const openAuthorVideo = (video: UserVideo) => {
+    setCommunityVideoId(video.id)
+    go("communityVideo")
+    void refreshPublic(video)
+  }
+  const openSavedSample = (video: CommunityFeedVideo) => {
+    if (communityVideos.some((item) => item.id === video.id)) {
+      setCommunityVideoId(video.id)
+      go("communityVideo")
+    } else if (video.is_preset_beta) {
+      setWorkspaceBetaId(video.id.slice("preset-beta-".length))
+      setBetaOrigin("community")
+      go("beta")
+    }
+  }
   const communityResults = communityVideos.filter((video) => {
     const route =
       catalogRoutes.find((item) => item.id === video.route_id) ??
@@ -523,9 +581,7 @@ export function useAppController() {
       if (epoch !== authEpoch.current) return
       removeVideo(id)
       setAttemptRecords((items) => items.filter((v) => v.id !== id))
-      setSavedBeta((items) => items.filter((v) => v !== id))
-      setLikedBeta((items) => items.filter((v) => v !== id))
-      setComments((items) => items.filter((v) => v.source !== `attempt:${id}`))
+      forgetVideo(id)
       setJobs((items) => {
         const next = { ...items }
         delete next[id]
@@ -544,7 +600,8 @@ export function useAppController() {
   }
   const showOthersBeta =
     betaVisible || activeVideo?.owner_id !== session?.user.id || !hasAttempt
-  const communityBetaVideo = routeBetaVideos.find(
+  // Another climber's uploaded video, opened from the route list, Community or Saved.
+  const communityBetaVideo = [...routeBetaVideos, ...savedUploads, ...publicVideos].find(
     (video) => video.id === activeAttemptId,
   )
   const isOwnUploadedVideo = myVideos.some(
@@ -564,11 +621,13 @@ export function useAppController() {
         routeId: video.route_id,
       }))
     if (libraryTab === "saved")
-      return savedBeta.map((id) => ({
-        id,
-        label: betaCards.find((card) => card.id === id)?.route ?? id,
-        meta: "Saved community beta",
-        target: "workspace" as const,
+      return savedLibraryVideos.map((video) => ({
+        id: video.id,
+        label: video.title,
+        meta: `Saved · ${video.display_name || video.username || "Community member"}${video.is_preset_sample ? " · Sample" : ""}`,
+        target: "saved" as const,
+        routeId: video.route_id,
+        contentUrl: video.content_url,
       }))
     return wantedRoutes.map((id) => ({
       id,
@@ -581,7 +640,7 @@ export function useAppController() {
     attemptRecords,
     jobs,
     libraryTab,
-    savedBeta,
+    savedLibraryVideos,
     wantedRoutes,
     myVideos,
   ])
@@ -595,15 +654,20 @@ export function useAppController() {
         communitySearch, setCommunitySearch, communityGymFilter, setCommunityGymFilter,
         catalogGyms, communityGradeFilter, setCommunityGradeFilter, catalogRoutes,
         communityResults, setCommunityVideoId, setExpandedCommunityDescription, go,
-        communityVideos,
+        communityVideos, publicHasMore, publicLoading, publicError, loadMorePublic, retryPublic,
       },
       communityVideoScreen: {
         communityVideos, communityVideoId, catalogRoutes, expandedCommunityDescription,
-        back, likedBeta, toggle, setLikedBeta,
-        savedBeta, setSavedBeta, setComputeVideo, setExpandedCommunityDescription,
+        back, social, toggleSocial, shareVideo, danmakuOn, toggleDanmaku,
+        session, expireSession, updateCommentCount, setComputeVideo, setExpandedCommunityDescription,
+        following, toggleFollow, openAuthor,
+      },
+      authorScreen: {
+        userId: authorId, session, following, toggleFollow, openVideo: openAuthorVideo,
+        openMyLibrary: () => go("library"), onExpired: expireSession,
       },
       gymsScreen: { search, setSearch, gymResults, setSelectedGym, go },
-      galleryScreen: { selectedGym, catalogRoutes, gradeFilter, setGradeFilter, wantedRoutes, openRoute, catalog, toggle, setWantedRoutes },
+      galleryScreen: { selectedGym, catalogRoutes, gradeFilter, setGradeFilter, wantedRoutes, openRoute, catalog, toggleWanted },
       routeScreen: { selectedGym, selectedRoute, openWorkspace, routeAttempts },
       workspaceScreen: {
         selectedGym, selectedRoute, hasAttempt, isOwnUploadedVideo,
@@ -624,16 +688,14 @@ export function useAppController() {
         renderComments,
       },
       betaDetailScreen: {
-        selectedBeta, betaOrigin, likedBeta, workspaceBetaId,
-        toggle, setLikedBeta, savedBeta, setSavedBeta,
+        selectedBeta, betaOrigin, social, workspaceBetaId, toggleSocial,
         selectedGym, selectedRoute, setComputeVideo, renderComments,
       },
       libraryScreen: {
         libraryTab, setLibraryTab, catalogGyms, myVideos,
         catalogRoutes, setSelectedRoute, setSelectedGym, setActiveAttemptId,
         setHasAttempt, setWorkspaceEntry, setWorkspaceSource, go,
-        libraryItems, openRoute, setWorkspaceBetaId, setBetaOrigin,
-        openWorkspace,
+        libraryItems, openRoute, savedVideos: savedLibraryVideos, openSavedSample,
       },
     },
     shell: {

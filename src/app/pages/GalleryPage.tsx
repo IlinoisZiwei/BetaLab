@@ -11,8 +11,7 @@ export function GalleryPage({
   wantedRoutes,
   openRoute,
   catalog,
-  toggle,
-  setWantedRoutes,
+  toggleWanted,
 }: Props) {
   return (
     <main className="screen with-header route-gallery-page">
@@ -132,7 +131,7 @@ export function GalleryPage({
                     : `Bookmark ${routeLabel(route.id)}`
                 }
                 aria-pressed={wantedRoutes.includes(route.id)}
-                onClick={() => toggle(route.id, wantedRoutes, setWantedRoutes)}
+                onClick={() => void toggleWanted(route.id)}
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M6.5 3.5h11v17l-5.5-3.8-5.5 3.8z" />

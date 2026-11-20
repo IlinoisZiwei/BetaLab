@@ -1,22 +1,21 @@
 import { AppButton, MediaVideo, PlaybackButton } from "../shared"
 import type { AppController } from "../useAppController"
+import { socialVideoKey } from "../../features/community/social"
 
 type Props = AppController["pages"]["betaDetailScreen"]
 
 export function BetaPage({
   selectedBeta,
   betaOrigin,
-  likedBeta,
+  social,
   workspaceBetaId,
-  toggle,
-  setLikedBeta,
-  savedBeta,
-  setSavedBeta,
+  toggleSocial,
   selectedGym,
   selectedRoute,
   setComputeVideo,
   renderComments,
 }: Props) {
+  const socialId = socialVideoKey(workspaceBetaId)
   return (
     <main className="screen with-header beta-detail-page">
       <header className="beta-video-info">
@@ -29,12 +28,12 @@ export function BetaPage({
                 type="button"
                 aria-label="Like video"
                 title={
-                  likedBeta.includes(workspaceBetaId)
+                  social[socialId]?.liked
                     ? "Unlike video"
                     : "Like video"
                 }
-                aria-pressed={likedBeta.includes(workspaceBetaId)}
-                onClick={() => toggle(workspaceBetaId, likedBeta, setLikedBeta)}
+                aria-pressed={!!social[socialId]?.liked}
+                onClick={() => void toggleSocial(socialId, "liked")}
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" />
@@ -44,12 +43,12 @@ export function BetaPage({
                 type="button"
                 aria-label="Save beta"
                 title={
-                  savedBeta.includes(workspaceBetaId)
+                  social[socialId]?.saved
                     ? "Remove saved beta"
                     : "Save beta"
                 }
-                aria-pressed={savedBeta.includes(workspaceBetaId)}
-                onClick={() => toggle(workspaceBetaId, savedBeta, setSavedBeta)}
+                aria-pressed={!!social[socialId]?.saved}
+                onClick={() => void toggleSocial(socialId, "saved")}
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z" />

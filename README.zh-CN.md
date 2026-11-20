@@ -34,7 +34,7 @@ BetaLab 将路线浏览、攀岩视频和基于身体比例的骨架预览连接
 
 | 模块 | 本地已实现 | 剩余工作 |
 | --- | --- | --- |
-| 账号与视频 | 登录、资料、关联路线的上传、播放、可见性和删除 | 部署完善、备份恢复、更广泛设备测试 |
+| 账号与视频 | 登录、资料、关联路线的上传、播放、可见性和删除；数据库、上传和计算产物的备份恢复（含校验） | 部署完善、更广泛设备测试 |
 | 路线目录 | Movement Fishtown、73张高亮路线图及 r1 | 核查不确定图片标注，补充其他目录数据 |
 | 任务与通知 | 持久队列、单 worker、重试、通知、受保护产物 | 更广泛运行与性能验证 |
 | 上传后分析 | 自动提交、提交恢复、失败重试、刷新恢复 | 更多真实视频异常场景和更具体的处理提示 |
@@ -42,7 +42,7 @@ BetaLab 将路线浏览、攀岩视频和基于身体比例的骨架预览连接
 | 新视频输入 | 输入提取、人工接触版本、局部标定；有测量输入时的墙面拼接/相机对齐与统一导出 | 真实手持视频标定数据、自动移动相机恢复、人体深度/源动作重建及适配 |
 | Trial2 几何 | v5 源动作与目标身材诊断预览 | 基线仍失败；源动作调查目前暂缓 |
 | 结果展示 | 示例、诊断和设有准入条件的技巧结果分开 | 当前流程尚未实现完整模型检查和真实技巧比较 |
-| 社区互动 | 原型界面交互 | 点赞、收藏、评论/回复持久化及跨设备同步尚未完成 |
+| 社区互动 | 持久化评论及一层回复、评论点赞、按时间点出现的弹幕（界面称 live comments）、视频点赞/收藏/转发、想爬路线、关注，上传视频与预置示例均支持；点击作者或右滑进入作者主页（N2.8）；Community 分页；分享链接 | 私有账号的关注规则与账号可见性（N1.2、N2.5）；接口见 `docs/SOCIAL_API.md` |
 
 任务完成表示计算和保存结束，不表示攀爬动作已通过几何或物理验证。
 
@@ -190,6 +190,9 @@ My skeletons 和 Notifications 入口仅位于 My Library 内的收藏分类上�
 | 全局几何 | `GET` / `POST /tasks/{id}/world-review`；拥有者专用，GET可指定version |
 | 全局计算输入 | `GET /tasks/{id}/world-review/export?version=...`；显式版本，包含未解决状态 |
 | 通知 | `GET /notifications`；`PATCH /notifications/{id}/read` |
+| 评论 | `GET` / `POST /videos/{id}/comments`（一级评论，分页，含 `total_with_replies`）；`GET /comments/{id}/replies`；`DELETE /comments/{id}`（仅作者）；`PUT` / `DELETE /comments/{id}/like` |
+| 视频互动 | `PUT` / `DELETE /videos/{id}/like` 与 `/videos/{id}/save`；`POST /videos/{id}/share`；`GET /videos/{id}/danmaku`；`GET /social/videos?ids=`（最多 100 个视频的计数与本人状态）；`GET /me/saved-videos` |
+| 路线与关注 | `GET /me/wanted-routes`；`PUT` / `DELETE /routes/{id}/want`；`PUT` / `DELETE` / `GET /users/{id}/follow`；`GET /me/following`；`GET /users/{id}/profile`（作者主页，仅公开视图） |
 
 以上路由均有 `/api` 前缀。精确请求结构以交互 OpenAPI 为准。计算 [schema 和 fixture](docs/compute/examples/) 保留为机器可读示例；实际模型以 `contracts.py`、`input_schema.py` 为准。在 API 环境使用 `python -m backend.compute.export_examples` 导出示例。
 
@@ -259,6 +262,18 @@ Movement Fishtown 保留场馆 ID `gym-a`。图片导入加入 IMG_7518–IMG_75
 - `scripts/import-route-photos.py` 从独立的全质量交付文件夹准备资源，不是启动步骤。Gym B 尚无提供的路线录像。
 
 私有上传使用 `UPLOAD_DIR`；任务工作文件、发布产物和不可变核查记录使用 `COMPUTE_STORAGE_DIR`。本地测试报告和备用包在被忽略的 `backend/compute/runs/` 下，属于本机证据，不保证全新 clone 中存在。数据库、上传文件和计算存储需要分别纳入备份。
+
+### 备份与恢复
+
+数据库、上传视频和计算产物必须一起备份，否则恢复后记录和文件会对不上。在仓库根目录、使用 API 环境运行（默认通过 Docker；与 `manage` 一样，加 `--direct` 改用本机 PostgreSQL 工具）：
+
+```sh
+python3 -m backend.db.backup backup                  # 写入 backups/<UTC 时间>/
+python3 -m backend.db.backup verify backups/<目录>    # 恢复到临时库并逐表核对
+python3 -m backend.db.backup restore backups/<目录> --yes
+```
+
+备份包含 `db.dump`、`uploads.tar.gz`、`compute.tar.gz` 和 `manifest.json`（各表行数、数据库引用的全部上传与发布产物路径、每个文件的 SHA-256）。**每次备份后都运行 `verify`**：它恢复到 `<POSTGRES_DB>_restore_check`，逐表核对行数并检查每个被引用的文件都在归档中，然后删除临时库；文件损坏或缺少视频/产物都会报错并以非零状态退出。`restore` 需要 `--yes`，运行前先停止 API 和 worker；当前上传和计算目录会改名为 `<目录>.before-restore-<时间>`，不会被删除。`backups/` 已加入 `.gitignore`：其中有用户数据和密码哈希，不要提交，应复制到另一块磁盘或另一台机器保存。
 
 <a id="results"></a>
 ## 9. 结果与已知限制

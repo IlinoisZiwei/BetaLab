@@ -14,6 +14,11 @@ export type VideoAction = {
   type: "replace"
   list: keyof VideoLists
   videos: UserVideo[]
+} | {
+  // Next page of a paged list; ids already present are skipped.
+  type: "append"
+  list: keyof VideoLists
+  videos: UserVideo[]
 } | { type: "upsert"; video: UserVideo; routeId: string } | {
   type: "remove"
   id: string
@@ -27,6 +32,10 @@ export function videoReducer(
   if (action.type === "reset") return emptyVideos()
   if (action.type === "replace")
     return { ...state, [action.list]: action.videos }
+  if (action.type === "append") {
+    const current = state[action.list]
+    return { ...state, [action.list]: [...current, ...action.videos.filter((video) => !current.some((item) => item.id === video.id))] }
+  }
   const id = action.type === "remove" ? action.id : action.video.id
   const without = (items: UserVideo[]) => items.filter((item) => item.id !== id)
   if (action.type === "remove")
