@@ -28,7 +28,7 @@ def diagnostic_moments(evidence,gaps):
         for first,last in runs(ground[:,limb].tolist()):
             moments.append(dict(id=f'ground-{name}-{first}',kind='unconfirmed_contact',
                 frame=first,end_frame=last,at_seconds=first/30,limb=name,media='video',gap_cm=None,
-                title='地面几何未验证',explanation='原脚接地候选仍保留；底部墙角未知，当前不把推算的地面坐标作为已验证约束。'))
+                title='Ground geometry not verified',explanation='The original foot-ground candidates are kept. The lower wall corner is unknown, so the estimated ground coordinates are not used as a verified constraint.'))
     return sorted(moments,key=lambda m:(m['frame'],m['limb']))
 
 def contact_transitions(evidence):
