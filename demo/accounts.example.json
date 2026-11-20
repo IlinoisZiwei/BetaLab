@@ -1,0 +1,32 @@
+{
+  "accounts": [
+    {
+      "username": "demo_nora",
+      "password": "CHANGE-ME",
+      "display_name": "Nora (demo)",
+      "height_cm": 170,
+      "arm_span_cm": 172,
+      "videos": [
+        {
+          "path": "~/Movies/betalab-demo/corner-study-send.mp4",
+          "route_id": "r1",
+          "title": "Corner Study send (demo)",
+          "visibility": "public",
+          "share_as_beta": true
+        }
+      ]
+    },
+    {
+      "username": "demo_sam",
+      "password": "CHANGE-ME",
+      "display_name": "Sam (demo)",
+      "height_cm": 166,
+      "arm_span_cm": 170
+    },
+    {
+      "username": "demo_viewer",
+      "password": "CHANGE-ME",
+      "display_name": "Guest viewer (demo)"
+    }
+  ]
+}

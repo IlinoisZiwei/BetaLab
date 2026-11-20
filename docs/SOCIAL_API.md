@@ -24,7 +24,7 @@ The service never reveals whether something exists that the caller may not see:
 | Invalid body, bad pagination (`limit` 1–100, `offset` ≥ 0), following yourself | `422` |
 | No session | `401` |
 
-Errors use FastAPI's shape: `{"detail": "Video not found"}`.
+Errors use the API's shared shape (`backend/app.py`): `{"error": {"message": "Video not found"}}`. Invalid fields return `{"error": {"message": "Invalid request fields"}}` without echoing input.
 
 When a video turns private, its social rows are kept but hidden from everyone except the owner. They come back if it becomes public again. Deleting a video deletes its comments, likes, saves and shares (trigger `user_videos_social_cleanup`).
 

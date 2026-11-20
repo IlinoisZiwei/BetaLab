@@ -79,3 +79,11 @@ button.comment-time { cursor:pointer; }
 .compact-composer.is-expanded > .comment-input-wrap { flex-wrap:wrap; }
 .comment-section .compact-composer.is-expanded textarea { flex:1 0 100%; width:100%; }
 .compact-composer.is-expanded .comment-compose-footer { flex:1 0 100%; justify-content:space-between; padding:0 6px 5px 11px; }
+
+/* N3.2: horizontal swipes are app gestures (left = back, right = author page).
+   Stop the phone browser from treating them as its own history back/forward
+   swipe, which would leave the app. */
+html, body { overscroll-behavior-x: none; }
+/* touch-action only combines with ancestors up to the nearest scroll container,
+   so every vertical scroller inside the app repeats it (.phone-content has it already). */
+.community-tiktok-scroll, .comment-sheet, .community-tiktok-description.is-expanded { touch-action: pan-y; overscroll-behavior-x: none; }

@@ -330,6 +330,7 @@ backend/.venv/bin/python -m unittest discover -s tests/compute -v
 | `test_video_management_browser.py` | `BETALAB_VIDEO_BROWSER_TEST=1` |
 | `test_new_inputs.py` | `BETALAB_TEST_INPUTS=1` |
 | `test_phase5_rehearsal.py` | `BETALAB_REHEARSAL_TEST=1` |
+| `test_social_browser.py` | `BETALAB_SOCIAL_BROWSER=1`（无需录像；覆盖触屏手势、示例视频、失败状态与切换账号；可用 `BETALAB_CHROME` 指定 Chrome） |
 
 这些专项还依赖其说明中的本地录像/报告与源环境；全新 clone 运行前需检查 setup 条件。部分浏览器测试明确导入已核验预生成产物，不重新运行源拟合。
 
@@ -361,6 +362,8 @@ backend/.venv/bin/python -m unittest discover -s tests/compute -v
 
 <a id="demo"></a>
 ## 11. 展示与故障处理
+
+逐步演示脚本、预设账号以及示例与用户内容的区分见 `docs/DEMO_SCRIPT.md`。演示账号从被 Git 忽略的 `demo/accounts.local.json` 创建：`backend/.venv/bin/python -m backend.db.demo_accounts demo/accounts.local.json [--upload]`，密码不进仓库。
 
 启动本地服务并登录，使用真实上传视频展示权限。Trial2 使用未改动的原录像上传至 r1，运行分析，再用另一账号进行个人生成。播放和诊断跳转时同时展示基线标签。新视频展示提取输入与标定核查，不宣称完整适配已完成。
 

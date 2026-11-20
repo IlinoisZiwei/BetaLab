@@ -330,6 +330,7 @@ Browser tests resolve Node from PATH by default; set `BETALAB_NODE` to an absolu
 | `test_video_management_browser.py` | `BETALAB_VIDEO_BROWSER_TEST=1` |
 | `test_new_inputs.py` | `BETALAB_TEST_INPUTS=1` |
 | `test_phase5_rehearsal.py` | `BETALAB_REHEARSAL_TEST=1` |
+| `test_social_browser.py` | `BETALAB_SOCIAL_BROWSER=1` (no recordings needed; touch gestures, samples, failure states, account switching; `BETALAB_CHROME` may point at a Chrome binary) |
 
 These suites also require their documented local recordings/reports and source environment; inspect their setup prerequisites before running in a fresh clone. Several browser tests deliberately import verified precomputed artifacts and do not rerun source fitting.
 
@@ -361,6 +362,8 @@ Local evidence paths: `backend/compute/runs/phase3-real-62fc330f/validation.json
 
 <a id="demo"></a>
 ## 11. Demo and troubleshooting
+
+The step-by-step demo, demo accounts and sample-versus-user content rules are in `docs/DEMO_SCRIPT.md`. Demo accounts are created from a Git-ignored `demo/accounts.local.json` with `backend/.venv/bin/python -m backend.db.demo_accounts demo/accounts.local.json [--upload]`; passwords never enter the repository.
 
 Start the local stack, log in, and use an actual uploaded video to demonstrate permissions. For Trial2, upload the unchanged original to r1, run analysis, then use another account for personal generation. Show baseline labels alongside playback and diagnostic jumps. For a new video, demonstrate extracted inputs and calibration review without claiming completed adaptation.
 

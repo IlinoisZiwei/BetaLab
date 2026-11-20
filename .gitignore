@@ -30,3 +30,6 @@ data/compute/
 
 # Database/media backups (python -m backend.db.backup): user data and password hashes, never commit
 /backups/
+
+# B5.2 demo accounts with real passwords (copy demo/accounts.example.json), never commit
+/demo/*.local.json

@@ -1,6 +1,15 @@
 import { useState, useEffect } from "react"
 import type { Screen } from "../shared"
 
+/** True when the touch started in something that scrolls sideways (e.g. a strip of cards). */
+function insideHorizontalScroller(target: Element | null) {
+  for (let element = target; element && element !== document.body; element = element.parentElement) {
+    const overflow = getComputedStyle(element).overflowX
+    if ((overflow === "auto" || overflow === "scroll") && element.scrollWidth > element.clientWidth) return true
+  }
+  return false
+}
+
 export function useNavigation() {
   const [screen, setScreen] = useState<Screen>("home")
   const [history, setHistory] = useState<Screen[]>([])
@@ -38,11 +47,14 @@ export function useNavigation() {
       const touch = event.touches[0],
         dx = touch.clientX - start.x,
         dy = touch.clientY - start.y
+      // Horizontal swipes are app gestures (left = back, right = author page on
+      // Community videos). Claim them so the phone's browser does not run its own
+      // history swipe and leave the app, except inside sideways-scrolling strips.
       if (
-        dx < -12 &&
+        Math.abs(dx) > 12 &&
         Math.abs(dx) > Math.abs(dy) * 1.5 &&
-        history.length &&
-        event.cancelable
+        event.cancelable &&
+        !insideHorizontalScroller(event.target as Element)
       )
         event.preventDefault()
     }
