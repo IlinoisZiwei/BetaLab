@@ -413,6 +413,7 @@ Original Trial2 video SHA-256: `9964d27ca051953d77cf10ee94a1772bd73e30d7e23fa09a
 | --- | --- |
 | Frontend-only / local-server experiments | Historical; their session-only claims and quick/detailed timings do not describe the current authenticated stack |
 | A's foundation and Yiru engineering log | Accounts, catalog, private uploads and sharing decisions retained; later task implementation supersedes old pending-task notes |
+| B's Sonia implementation log | Consolidates persistent social work, author pages, gestures, demo preparation, PR verification and remaining integration boundaries; see `docs/SONIA_IMPLEMENTATION_LOG.md` |
 | C phases 1–5 | Contracts → persistence → real artifacts → diagnostics → operational rehearsal; completion of a stage did not establish algorithm feasibility |
 | v3/v4 source studies | Historical geometry assumptions/results; not current wall measurements or performance |
 | v5 geometry repair | Confirmed wall angles/boundaries, improved source/target fit; baseline still failed |
