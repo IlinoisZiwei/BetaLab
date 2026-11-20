@@ -33,8 +33,9 @@ export type PublicProfile = {
   id: string
   username: string
   display_name: string
-  joined_at: string
-  /** Always "public" until account visibility (N2.5) lands. */
+  joined_at: string | null
+  bio?: string
+  /** Honors account visibility and the Library profile setting. */
   account_visibility: "public" | "private"
   is_me: boolean
   follower_count: number

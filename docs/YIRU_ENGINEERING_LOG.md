@@ -77,3 +77,60 @@
 - 公开链接是否只限登录用户，以及用户删除账号时评论、视频和任务的处理规则。
 - 当前临时隧道、局域网访问与应用 Origin／Cookie 配置。
 - 每项功能实现后更新状态、PR 链接、验证结果和已知限制。
+
+
+## 2026-11-19：My Page、上传日历、分项隐私和资料设置
+
+### 本次基线与需求
+
+- 从 GitHub 拉取至 `2a8871d`，其中包含队列、任务、通知和诊断流程及代码拆分；这些是团队远端更新，不计作 A 本轮独立完成的算法工作。
+- 恢复 Implementation 与本日志，文档恢复提交 `ecef50e` 已推送。本条记录对应的后续实现仍在本地、尚未提交／推送。
+- A 负责 My Page、Library、Calendar、资料与隐私；B 负责 Comment、Follow、他人主页及社交数据；C 负责算法调整和既有任务／通知后端。
+
+### 本地实现
+
+- 导航和首页入口从 My Library 改为 My Page；首页右上角 Profile 图标移除。My Page 顶部展示资料和四项社交统计，目前没有社交数据时为 0，不显示开发提示。
+- My Page 下分 My Library／My Calendar。Library 包含 My Attempts、Saved Beta、Want to Try、My Skeletons；本人视频保持 gym→route 分组，本人仍可看自己的 Private 视频。
+- 通知改为右上角铃铛，保留未读数、列表、已读和任务结果跳转；全屏 Community 不显示铃铛。生成／通知跳转会进入 Library 的 My Skeletons。
+- Calendar 使用 UTC 上传日期，年度可选、按月份分组，每天一个色块。点击／悬浮展示场馆、不同路线数、记录次数；颜色按每日上传数分档（0、1、2–3、4–6、7+）。这表示上传活动，不是已核实的实际训练强度。用户确认目前仅支持有上传视频的记录，手动记录与日期调整后续再做。
+- Edit profile 分组为个人信息、隐私和账号。支持用户名（同时改变登录名）、显示名、简介（最多 500 字符）、身高、臂展；头像暂缓。
+- 修改密码需验证当前密码，成功后其他设备会话失效，当前设备保留登录。密码继续以 Argon2 哈希保存，不记录明文。
+- 账号 Public／Private、身体数据、Library、点赞、收藏、Skeleton、Calendar 分项开关已持久保存。Library 是点赞／收藏／Skeleton 的父开关，Calendar 独立；新增分类默认隐藏，Want to Try 保持私有。
+- Private 账号覆盖公开主页选项，但主动发布的 Public 视频仍可在 Community 访问。Share as beta 是独立的身体数据分享授权，设置页已注明。
+- 提供 B 可复用的公开主页接口：按权限过滤资料、视频和日历；对他人只统计公开视频活动。Skeleton 公开仅提供完成的生成预览，不公开私有任务详情和输入数据；关闭分享、源视频改私有或删除后撤回他人访问。
+- 点赞／收藏公开开关已保存；其公开列表当前为空，等待 B 的持久化社交数据接入。四项社交统计尚非真实后端统计，待 B 接入。
+
+### 数据库、接口与启动
+
+- 新增 `012_page_privacy.sql`、`013_profile_settings.sql`，本机已执行至迁移 013。首次启动新版代码需先迁移，避免任务／通知或资料字段缺失。
+- 本次曾定位 My Library 的 Service unavailable 为迁移未执行导致 `compute_notifications` 表缺失，已补齐；API health 本身不等于所有业务表可用。
+- 新增／扩展：`PUT /api/profile`、`PATCH /api/profile/privacy`、`POST /api/profile/password`、`GET /api/users/{id}/page`、`GET /api/users/{id}/skeletons/{task}/video`。
+- Vite 增加 `/api/users`、`/api/health` 代理至 8788；遗留算法入口仍单独指向 8787。API 已重启，预览地址 `http://127.0.0.1:5174/`。
+- 本轮未启动算法 worker；浏览页面、编辑资料与隐私可用，不应把这些检查理解为真实生成验收。
+- `.env`、数据库卷、上传和计算产物继续只在本地，不随 GitHub 提交。现有文件名带 ` 2` 的重复文档未纳入本轮修改。
+
+### 验证与边界
+
+- `npm run build`、`npx tsc --noEmit --pretty false`、`git diff --check` 通过。
+- 新增 `test_profile_settings.py`，4 项隔离数据库检查通过：用户名／简介及冲突校验、分项权限与 Private 覆盖、Skeleton 分享撤回、修改密码与会话失效。
+- 原 `test_phase3_access.py` 的 5 项受保护媒体检查通过，覆盖访问、Range、完整性、私有源与删除后撤回等。
+- 测试使用独立临时 schema 和合成素材，不修改展示账号。当前 Starlette 测试客户端依赖 httpx2，已安装并补充到测试依赖清单。
+- 未完成：手机实机布局、完整页面操作和跨设备验收；B 的作者主页／社交数据联调；C 的真实生成／通知／结果全链路；备份恢复及多人演练。Implementation 已将实现与这些独立验收分开跟踪。
+
+### 2026-11-19 补充：Edit video
+
+- Yiru 确认此前真实视频上传、可见性修改与删除等流程测试可用。
+- 视频管理的 Change visibility 改为 Edit video，同一表单编辑标题、描述、Private／Public、Share as beta，点击 Save changes 一次保存；Cancel 不改记录，失败保留输入并显示错误，保存期间防重复提交。
+- PATCH 视频 API 扩展为部分更新；标题去除首尾空白后为 1–120 字符，描述最多 500 字符并可清空；未提供的字段保留原值。Private 自动关闭 Beta 分享，明确请求 Private + Beta 则拒绝；只有上传者可编辑。
+- 保存沿用同一视频 ID／文件，统一 reducer 更新本人、Community、路线 Beta 列表；详情显示当前标题与描述，不重新上传视频。
+- 3 项隔离数据库视频编辑回归与 3 项前端列表同步检查通过；构建、TypeScript 和 diff 检查通过。新编辑表单仍待用户实际操作验收，代码未提交。
+
+### 本次 GitHub 交付与远端合并
+
+A 的代码、迁移、测试和本日志／Implementation 已提交 `28b1216`。首次推送因远端有新提交被拒绝，随后合并 PR #1 的 `375277a`，保留双方历史和任务记录。远端已包含 Comment、Follow、作者页、持久化收藏和备份恢复工具；它们不再是尚未开发的 B 功能。合并解决 Library／页面标题／文档冲突及重复 Vite 代理，并使作者页遵守 A 的 Private 账号和 Library 隐藏设置。
+
+合并后 34 项后端回归、10 项前端检查、构建和 TypeScript 通过；完整文件名迁移按原校验和保留，本机已补齐远端社交迁移。四项 My Page 统计与公开点赞／收藏分类的真实数据接入仍待联调，手机／跨设备与真实算法验收继续保留。
+
+### Calendar 单月浏览调整
+
+按 Yiru 要求，Calendar 从全年月份平铺改为单月展示。进入日历或切换年份时定位到当前月份；手机左右滑动、电脑拖动及前后箭头可浏览所选年份的 1–12 月，不跨年。日期保留颜色、点击／悬浮详情，并显示日期数字和星期。日历区域排除全局左滑返回，防止切月误触返回。构建、TypeScript 与 diff 检查通过；手机手势仍待实机确认。本次调整尚未提交／推送。

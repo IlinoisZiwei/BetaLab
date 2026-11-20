@@ -7,7 +7,7 @@ from uuid import uuid4
 from fastapi import File, Form, UploadFile
 from ..media import ranged_file
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from ..database import database
 from ..auth import current_session
 
@@ -161,24 +161,41 @@ def video_content(video_id: str, request: Request, session=Depends(current_sessi
                        extra_headers={'Content-Disposition': 'inline'})
 
 
-class VisibilityUpdate(BaseModel):
+class VideoUpdate(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    visibility: str
-    share_as_beta: bool = False
+    title: str | None = Field(default=None, min_length=1, max_length=120)
+    description: str | None = Field(default=None, max_length=500)
+    visibility: str | None = Field(default=None, pattern=r'^(private|public)$')
+    share_as_beta: bool | None = None
+
+    @field_validator('title', 'description', mode='before')
+    @classmethod
+    def trim_text(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+    @model_validator(mode='after')
+    def require_changes(self):
+        if not self.model_fields_set or any(getattr(self, field) is None for field in self.model_fields_set):
+            raise ValueError('Provide at least one non-null video field')
+        return self
 
 
 @router.patch('/api/videos/{video_id}')
-def update_video(video_id: str, body: VisibilityUpdate, session=Depends(current_session)):
-    visibility = body.visibility
-    if visibility not in ('private', 'public'):
-        raise HTTPException(422, 'Visibility must be private or public')
+def update_video(video_id: str, body: VideoUpdate, session=Depends(current_session)):
+    changes = body.model_dump(exclude_unset=True)
     with database() as db:
-        if body.share_as_beta and visibility != 'public':
+        current = db.execute('SELECT * FROM user_videos WHERE id=%s AND owner_id=%s FOR UPDATE',
+                             (video_id, session['id'])).fetchone()
+        if not current:
+            raise HTTPException(404, 'Video not found')
+        visibility = changes.get('visibility', current['visibility'])
+        if changes.get('share_as_beta') and visibility != 'public':
             raise HTTPException(422, 'Community Beta sharing requires a public video')
-        row = db.execute('UPDATE user_videos SET visibility=%s,share_as_beta=%s WHERE id=%s AND owner_id=%s RETURNING *',
-                         (visibility, body.share_as_beta, video_id, session['id'])).fetchone()
-    if not row:
-        raise HTTPException(404, 'Video not found')
+        if visibility == 'private':
+            changes['share_as_beta'] = False
+        assignments = ','.join(field + '=%s' for field in changes)
+        row = db.execute('UPDATE user_videos SET '+assignments+' WHERE id=%s AND owner_id=%s RETURNING *',
+                         (*changes.values(), video_id, session['id'])).fetchone()
     return video_dict(row)
 
 

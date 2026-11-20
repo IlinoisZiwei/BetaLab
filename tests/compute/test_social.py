@@ -259,6 +259,7 @@ class SocialTest(unittest.TestCase):
     # ------------------------------------------------------ author page (N2.8)
 
     def test_author_profile_shows_only_public_content(self):
+        self.alice.patch('/api/profile/privacy',json={'account_visibility':'public','calendar_visible':False,'library_visible':True})
         public = self.make_video(self.alice_id, share_as_beta=True)
         private = self.make_video(self.alice_id, 'private')
         self.bob.put(f'/api/users/{self.alice_id}/follow')

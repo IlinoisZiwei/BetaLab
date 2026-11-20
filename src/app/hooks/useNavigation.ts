@@ -32,9 +32,10 @@ export function useNavigation() {
     if (!element) return
     let start: { x: number; y: number } | null = null
     const begin = (event: TouchEvent) => {
+      start = null
       if (
         (event.target as Element).closest(
-          'input,textarea,select,[role="slider"]',
+          'input,textarea,select,[role="slider"],[data-horizontal-swipe]',
         )
       )
         return

@@ -45,6 +45,8 @@ export default defineConfig(({ mode }) => {
         '**/data/compute/**', '**/backend/compute/runs/**', '**/local-server/jobs/**'] },
       proxy: {
         '/api/auth': { target: apiTarget, changeOrigin: true },
+        '/api/users': { target: apiTarget, changeOrigin: true },
+        '/api/health': { target: apiTarget, changeOrigin: true },
         '/api/profile': { target: apiTarget, changeOrigin: true },
         '/api/gyms': { target: apiTarget, changeOrigin: true },
         '/api/routes': { target: apiTarget, changeOrigin: true },
@@ -54,7 +56,6 @@ export default defineConfig(({ mode }) => {
         '/api/comments': { target: apiTarget, changeOrigin: true },
         '/api/me': { target: apiTarget, changeOrigin: true },
         '/api/social': { target: apiTarget, changeOrigin: true },
-        '/api/users': { target: apiTarget, changeOrigin: true },
         '/api': { target: 'http://127.0.0.1:8787', changeOrigin: true },
       },
       host: process.env.FIGMA_DEV_SERVER_HOST || '0.0.0.0',

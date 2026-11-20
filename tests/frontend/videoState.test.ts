@@ -27,3 +27,16 @@ test('route-scoped beta, deletion and account reset retain collection boundaries
   assert.equal(state.owned.length, 0)
   assert.deepEqual(videoReducer(state, { type: 'reset' }), emptyVideos())
 })
+
+test('editing title and description updates the same video in owned, public and beta lists', () => {
+  const original = video({visibility:'public',share_as_beta:true})
+  let state = videoReducer(emptyVideos(), {type:'upsert',video:original,routeId:'r1'})
+  const edited = {...original,title:'New title',description:'New description'}
+  state = videoReducer(state,{type:'upsert',video:edited,routeId:'r1'})
+  for (const list of [state.owned,state.public,state.beta]) {
+    assert.equal(list.length,1)
+    assert.equal(list[0].id,original.id)
+    assert.equal(list[0].title,'New title')
+    assert.equal(list[0].description,'New description')
+  }
+})

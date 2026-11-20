@@ -102,7 +102,7 @@ The response is always the public view, even when you open your own page:
 }
 ```
 
-**Interim:** `account_visibility` is always `"public"` until A ships account visibility (N2.5). The agreed extension, still pending the N1.2 decision: for a private account viewed by someone else, return identity, `account_visibility: "private"` and `follower_count`, with `videos: []`. The page then shows the private-account notice.
+**Merged with A (N2.5):** this endpoint honors `account_visibility` and `library_visible`. A private profile returns username/ID, a private-account marker and no videos or profile statistics; a public profile with Library hidden returns no profile videos. This is the public preview even for its owner. Individually Public videos remain accessible in Community. Extended body/calendar/collection preferences use A’s `/users/{id}/page` endpoint; collection display and My Page social statistics still need integration. Follow-approval rules remain pending N1.2.
 
 Frontend entry points:
 

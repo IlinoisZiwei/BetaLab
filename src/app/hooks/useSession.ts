@@ -10,6 +10,8 @@ export function useSession({ navigation, onUserChange }: Options) {
   const { go, flash, setHistory, setScreen } = navigation
   const [measurementPrompt, setMeasurementPrompt] = useState(false)
   const [profile, setProfile] = useState({
+    username: "",
+    bio: "",
     name: "",
     height: "",
     wingspan: "",
@@ -34,11 +36,13 @@ export function useSession({ navigation, onUserChange }: Options) {
     setProfile(
       value
         ? {
+            username: value.user.username,
+            bio: value.user.bio ?? "",
             name: value.user.display_name,
             height: value.user.height_cm?.toString() ?? "",
             wingspan: value.user.arm_span_cm?.toString() ?? "",
           }
-        : { name: "", height: "", wingspan: "" },
+        : { username: "", bio: "", name: "", height: "", wingspan: "" },
     )
     setAccount({ email: value?.user.username ?? "", password: "" })
   }
@@ -101,6 +105,8 @@ export function useSession({ navigation, onUserChange }: Options) {
         method: "PUT",
         csrf: session.csrf_token,
         body: {
+          username: profile.username.trim(),
+          bio: profile.bio.trim(),
           display_name: profile.name.trim(),
           height_cm: profile.height.trim() ? Number(profile.height) : null,
           arm_span_cm: profile.wingspan.trim()

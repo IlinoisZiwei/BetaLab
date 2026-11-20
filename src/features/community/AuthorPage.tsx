@@ -85,7 +85,7 @@ export function AuthorPage({ userId, session, following, toggleFollow, openVideo
         {profile.is_me ? (
           <div className="author-self-note">
             <p>This is how other climbers see your page.</p>
-            <button type="button" className="comment-post" onClick={openMyLibrary}>Open My Library</button>
+            <button type="button" className="comment-post" onClick={openMyLibrary}>Open My Page</button>
           </div>
         ) : (
           <button
@@ -99,9 +99,9 @@ export function AuthorPage({ userId, session, following, toggleFollow, openVideo
         )}
       </section>
       <section className="author-videos" aria-label="Public videos">
-        <h2>Public videos</h2>
+        <h2>{profile.account_visibility === 'private' ? 'Private account' : 'Public videos'}</h2>
         {profile.videos.length === 0 ? (
-          <div className="comments-empty"><strong>No public videos yet</strong><p>Videos {profile.is_me ? "you share" : `${name} shares`} publicly will appear here.</p></div>
+          <div className="comments-empty"><strong>{profile.account_visibility === 'private' ? 'This account is private' : 'No videos shared on this profile'}</strong><p>{profile.account_visibility === 'private' ? 'This climber’s full profile is hidden.' : 'Only videos shared on this profile appear here.'}</p></div>
         ) : (
           <ul className="author-video-grid">
             {profile.videos.map(video => (
@@ -121,7 +121,7 @@ export function AuthorPage({ userId, session, following, toggleFollow, openVideo
             {loading ? "Loading…" : "Load more videos"}
           </button>
         )}
-        <p className="author-privacy-note">Only public videos are shown here. Private videos, saved items and training history stay private.</p>
+        <p className="author-privacy-note">Profile sections follow the climber’s privacy settings. Private videos are never shown here.</p>
       </section>
     </main>
   )

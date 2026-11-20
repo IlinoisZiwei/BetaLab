@@ -2,7 +2,7 @@ import type { UserVideo } from "../api"
 
 export type Screen = "home" | "account" | "profile" | "community" | "communityVideo" | "gyms" | "gallery" | "route" | "workspace" | "beta" | "library" | "author"
 
-export type LibraryTab = "attempts" | "saved" | "wanted"
+export type LibraryTab = "attempts" | "saved" | "wanted" | "skeletons"
 
 export type WorkspaceEntry = "attempt" | "upload" | "community"
 

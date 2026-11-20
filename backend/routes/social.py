@@ -417,15 +417,13 @@ def following(session=Depends(current_session)):
 def public_profile(user_id: str, limit: int = 20, offset: int = 0, session=Depends(current_session)):
     """What anyone signed in may see of an account: identity, follow counts and public videos.
 
-    Interim contract until A's account visibility (N2.5) lands: every account is
-    treated as public. Never includes private videos, saved items, Want to Try,
-    skeletons, notifications or body measurements outside Beta shares, even for
-    the owner, so the page always shows the public view.
+    Honors A's account and Library visibility, including when previewed by the
+    owner. Extended calendar/collection data remains on the /page endpoint.
     """
     page_args(limit, offset)
     with database() as db:
         _existing_user(db, user_id)
-        user = db.execute('SELECT id, username, display_name, created_at FROM users WHERE id = %s',
+        user = db.execute('SELECT * FROM users WHERE id = %s',
                           (user_id,)).fetchone()
         counts = db.execute(
             'SELECT (SELECT count(*) FROM follows WHERE followee_id = %(u)s) AS followers, '
@@ -439,6 +437,9 @@ def public_profile(user_id: str, limit: int = 20, offset: int = 0, session=Depen
             'CASE WHEN v.share_as_beta THEN u.arm_span_cm ELSE NULL END AS arm_span_cm '
             "FROM user_videos v JOIN users u ON u.id = v.owner_id WHERE v.owner_id = %s AND v.visibility = 'public' "
             'ORDER BY v.created_at DESC, v.id LIMIT %s OFFSET %s', (user_id, limit, offset)).fetchall()
+    hidden = user['account_visibility'] == 'private'
+    if hidden or not user['library_visible']:
+        rows = []
     videos = []
     for row in rows:
         item = video_dict(row)
@@ -446,10 +447,11 @@ def public_profile(user_id: str, limit: int = 20, offset: int = 0, session=Depen
                     height_cm=row['height_cm'], arm_span_cm=row['arm_span_cm'])
         videos.append(item)
     return {
-        'id': str(user['id']), 'username': user['username'], 'display_name': user['display_name'],
-        'joined_at': user['created_at'].isoformat(), 'account_visibility': 'public',
+        'id': str(user['id']), 'username': user['username'], 'display_name': '' if hidden else user['display_name'],
+        'bio': '' if hidden else user['bio'],
+        'joined_at': None if hidden else user['created_at'].isoformat(), 'account_visibility': user['account_visibility'],
         'is_me': user['id'] == session['id'],
-        'follower_count': counts['followers'], 'following_count': counts['following'],
-        'following': counts['followed'], 'public_video_count': counts['videos'],
+        'follower_count': 0 if hidden else counts['followers'], 'following_count': 0 if hidden else counts['following'],
+        'following': counts['followed'], 'public_video_count': counts['videos'] if not hidden and user['library_visible'] else 0,
         'videos': videos, 'limit': limit, 'offset': offset,
     }

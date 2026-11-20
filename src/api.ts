@@ -25,8 +25,10 @@ export async function api<T>(path: string, options: {method?: string; body?: unk
   return data as T
 }
 
-export type User = {id: string; username: string; display_name: string; height_cm: number | null; arm_span_cm: number | null}
+export type User = {bio?: string; measurements_visible?: boolean; library_visible?: boolean; likes_visible?: boolean; saves_visible?: boolean; skeletons_visible?: boolean; account_visibility?: "private" | "public"; calendar_visible?: boolean; id: string; username: string; display_name: string; height_cm: number | null; arm_span_cm: number | null}
 export type Session = {user: User; csrf_token: string}
 export type Gym = {id: string; name: string; location_label: string; active_route_count: number}
 export type Route = {id: string; gym_id: string; name: string; grade: string; set_label: string; archived: boolean}
 export type UserVideo = {id: string; owner_id: string; route_id: string; visibility: "private" | "public"; share_as_beta: boolean; original_name: string; title: string; description: string; media_type: string; size_bytes: number; duration_seconds: number; created_at: string; content_url: string; username?: string; display_name?: string; height_cm?: number | null; arm_span_cm?: number | null}
+
+export type VideoUpdate = Pick<UserVideo, "title" | "description" | "visibility" | "share_as_beta">

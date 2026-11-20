@@ -9,12 +9,12 @@ type Source = { source_analysis_id: string; source_analysis_version: string; is_
   original_body?: Body; baseline_status: string; quality: { warnings: string[] } }
 export type ComputeVideo = { id: string; title: string; display_name?: string; username?: string;
   is_preset_sample?: boolean; is_preset_beta?: boolean }
-type Props = { session: Session; source: ComputeVideo | null; closeSource: () => void; library: boolean; openLibrary: () => void; renderLibrary?: (content: ReactNode) => ReactNode }
+type Props = { session: Session; source: ComputeVideo | null; closeSource: () => void; library: boolean; openLibrary: () => void; hideBell?: boolean; renderLibrary?: (content: ReactNode) => ReactNode }
 const stateLabel: Record<string, string> = { queued: 'Queued', running: 'Generating', succeeded: 'Completed', failed: 'Failed' }
 const dimensions = (body?: Body) => body ? `${body.height_cm} cm height · ${body.arm_span_cm} cm arm span (${body.provenance === 'estimated' ? 'estimated' : 'provided'})` : 'Measurements unavailable'
 
 // Mounted once per signed-in user. Tasks live on the server, independently of pages.
-export function CommunityCompute({ session, source, closeSource, library, openLibrary, renderLibrary = content => content }: Props) {
+export function CommunityCompute({ session, source, closeSource, library, openLibrary, hideBell, renderLibrary = content => content }: Props) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [notes, setNotes] = useState<Note[]>([])
   const [unread, setUnread] = useState(0)
@@ -124,13 +124,12 @@ export function CommunityCompute({ session, source, closeSource, library, openLi
   const result = selected?.result
   const validBody = Number(height) >= 100 && Number(height) <= 230 && Number(span) >= 80 && Number(span) <= 260
   return <>
+    {!hideBell && <button className="notification-bell" aria-label={`Notifications, ${unread} unread`} onClick={() => setShowNotes(true)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>{unread > 0 && <span>{unread}</span>}</button>}
+
     {library && renderLibrary(<>
-    <nav className="compute-nav" aria-label="Library tools">
-      <button aria-expanded={showTasks} aria-controls="library-skeletons" onClick={() => setShowTasks(true)}>My skeletons</button>
-      <button onClick={() => setShowNotes(true)}>Notifications{unread > 0 ? ` (${unread})` : ''}</button>
-    </nav>
+
     {error && <p className="compute-error" role="alert">{error} <button onClick={() => setError('')}>Dismiss</button></p>}
-    {showTasks && <section id="library-skeletons" className="compute-library" aria-label="My skeletons">
+    {<section id="library-skeletons" className="compute-library" aria-label="My skeletons">
       <h2>My skeletons</h2><p>Personal results and background tasks. You can leave this page while generation runs.</p>
       {!tasks.length && <p>No tasks yet. Open a Community video to generate your own skeleton.</p>}
       {tasks.map(task => <button className="compute-row" key={task.id} onClick={() => void action(() => openTask(task.id))}>
