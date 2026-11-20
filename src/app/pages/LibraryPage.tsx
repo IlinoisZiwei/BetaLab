@@ -1,11 +1,12 @@
-import type { ReactNode } from "react"
+import { type ReactNode } from "react"
 import { AttemptRecord, routes, betaCards, AppButton, routeLabel, routeMedia, MediaImage, VideoThumbnail } from "../shared"
 import type { AppController } from "../useAppController"
 
-type Props = AppController["pages"]["libraryScreen"] & { computeContent?: ReactNode }
+type Props = AppController["pages"]["libraryScreen"] & { computeContent?: ReactNode; pageIntro?: ReactNode }
 
 export function LibraryPage({
   computeContent,
+  pageIntro,
   libraryTab,
   setLibraryTab,
   catalogGyms,
@@ -26,7 +27,7 @@ export function LibraryPage({
 }: Props) {
   return (
     <main className="screen with-header library-page">
-      {computeContent}
+      {pageIntro}
       <div className="tabs library-tabs">
         <button
           className={libraryTab === "attempts" ? "active" : ""}
@@ -49,7 +50,9 @@ export function LibraryPage({
         >
           Want to Try
         </button>
+        <button className={libraryTab === "skeletons" ? "active" : ""} type="button" onClick={() => setLibraryTab("skeletons")}>My Skeletons</button>
       </div>
+      {libraryTab === "skeletons" && computeContent}
       {libraryTab === "attempts" && (
         <section className="library-history gym-attempt-groups">
           {catalogGyms

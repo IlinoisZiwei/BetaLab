@@ -1,3 +1,4 @@
+import { MyPage } from "./app/pages/MyPage"
 import { CommunityCompute } from "./compute/CommunityCompute"
 
 import { Screen, techniqueTerms, AppButton, Field, MediaVideo, Placeholder, PlaybackButton } from "./app/shared"
@@ -98,8 +99,11 @@ function App() {
               source={computeVideo}
               closeSource={() => setComputeVideo(null)}
               library={screen === "library"}
-              renderLibrary={(content) => <LibraryPage {...pages.libraryScreen} computeContent={content} />}
+              hideBell={screen === "communityVideo"}
+              renderLibrary={(content) => <MyPage key={session.user.id} session={session} libraryProps={pages.libraryScreen} computeContent={content} />}
               openLibrary={() => {
+                window.dispatchEvent(new Event("open-my-skeletons"))
+                pages.libraryScreen.setLibraryTab("skeletons")
                 if (screen !== "library") go("library")
                 requestAnimationFrame(() =>
                   document.querySelector(".phone-content")?.scrollTo(0, 0),
@@ -171,7 +175,7 @@ function App() {
               },
               {
                 id: "library",
-                label: "My Library",
+                label: "My Page",
                 path: "M4 3h16v18l-8-5-8 5Z",
               },
             ] as const).map((tab) => {

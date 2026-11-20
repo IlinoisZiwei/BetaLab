@@ -32,7 +32,7 @@ def throttle(request):
 
 
 def public_user(user):
-    return {key: user[key] for key in ('id', 'username', 'display_name', 'height_cm', 'arm_span_cm')}
+    return {key: user[key] for key in ('id', 'username', 'display_name', 'height_cm', 'arm_span_cm', 'account_visibility', 'calendar_visible', 'bio', 'measurements_visible', 'library_visible', 'likes_visible', 'saves_visible', 'skeletons_visible')}
 
 
 def current_session(request: Request):

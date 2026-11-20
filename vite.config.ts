@@ -45,6 +45,8 @@ export default defineConfig(({ mode }) => {
         '**/data/compute/**', '**/backend/compute/runs/**', '**/local-server/jobs/**'] },
       proxy: {
         '/api/auth': { target: apiTarget, changeOrigin: true },
+        '/api/users': { target: apiTarget, changeOrigin: true },
+        '/api/health': { target: apiTarget, changeOrigin: true },
         '/api/profile': { target: apiTarget, changeOrigin: true },
         '/api/gyms': { target: apiTarget, changeOrigin: true },
         '/api/routes': { target: apiTarget, changeOrigin: true },

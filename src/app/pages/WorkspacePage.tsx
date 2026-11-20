@@ -1,3 +1,4 @@
+import { EditVideoForm } from "../../features/videos/EditVideoForm"
 import { ResultInsights } from "../../compute/ResultInsights"
 
 import { UploadAnalysis } from "../../compute/UploadAnalysis"
@@ -126,14 +127,15 @@ export function WorkspacePage({
       </header>
       {hasAttempt && isPresetSample && (
         <p className="sample-video-note">
-          This is a preset sample. Upload your own video to change visibility or
+          This is a preset sample. Upload your own video to edit its details or
           share it with the community.
         </p>
       )}
-      {workspaceEntry === "attempt" && communityBetaVideo?.description && (
-        <p className="community-beta-description">
-          {communityBetaVideo.description}
-        </p>
+      {hasAttempt && activeVideo && (
+        <section className="workspace-video-details" aria-label="Video details">
+          <h2>{activeVideo.title}</h2>
+          {activeVideo.description && <p>{activeVideo.description}</p>}
+        </section>
       )}
 
       {hasAttempt && activeAttempt && (
@@ -144,9 +146,9 @@ export function WorkspacePage({
                 <>
                   <button
                     className="btn btn-outline"
-                    onClick={() => setManageMode("visibility")}
+                    onClick={() => setManageMode("edit")}
                   >
-                    Change visibility
+                    Edit video
                   </button>
                   <button
                     className="btn btn-outline"
@@ -156,59 +158,8 @@ export function WorkspacePage({
                   </button>
                 </>
               )}
-              {manageMode === "visibility" && (
-                <>
-                  <p>Who can see this video?</p>
-                  <div className="privacy-options">
-                    {["Private", "Public"].map((option) => (
-                      <button
-                        key={option}
-                        className={
-                          activeAttempt.status.startsWith(option)
-                            ? "selected"
-                            : ""
-                        }
-                        aria-pressed={activeAttempt.status.startsWith(option)}
-                        onClick={() =>
-                          void changeVideo(
-                            option.toLowerCase() as "private" | "public",
-                            option === "Public" && !!activeVideo?.share_as_beta,
-                          )
-                        }
-                      >
-                        {option}
-                      </button>
-                    ))}
-                  </div>
-                  {activeAttempt.status.startsWith("Public") && (
-                    <label className="share-beta-choice">
-                      <input
-                        type="checkbox"
-                        checked={
-                          !!myVideos.find(
-                            (video) => video.id === activeAttemptId,
-                          )?.share_as_beta
-                        }
-                        onChange={(event) =>
-                          void changeVideo("public", event.target.checked)
-                        }
-                      />
-                      <span>
-                        <strong>Share as beta</strong>
-                        <small>
-                          Also show this video in Community Beta and share your
-                          height and wingspan for comparison.
-                        </small>
-                      </span>
-                    </label>
-                  )}
-                  <button
-                    className="btn btn-text"
-                    onClick={() => setManageMode(null)}
-                  >
-                    Done
-                  </button>
-                </>
+              {manageMode === "edit" && activeVideo && (
+                <EditVideoForm key={activeVideo.id} video={activeVideo} save={changeVideo} close={() => setManageMode(null)} />
               )}
               {manageMode === "delete" && (
                 <>

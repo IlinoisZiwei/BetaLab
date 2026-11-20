@@ -21,24 +21,7 @@ export function HomePage({ signedIn, go, setAccountMode }: Props) {
             <span>Lab</span>
           </h1>
         </div>
-        <button
-          className="account-icon-button"
-          type="button"
-          aria-label="Profile and account"
-          onClick={() => {
-            if (signedIn) {
-              go("profile")
-            } else {
-              setAccountMode("signin")
-              go("account")
-            }
-          }}
-        >
-          <span className="account-icon" aria-hidden="true">
-            <i />
-            <i />
-          </span>
-        </button>
+
       </header>
       <div className="home-editorial">
         <span className="home-eyebrow">YOUR NEXT MOVE STARTS HERE</span>
@@ -96,7 +79,7 @@ export function HomePage({ signedIn, go, setAccountMode }: Props) {
               </svg>
             </span>
           </span>
-          <strong>My Library</strong>
+          <strong>My Page</strong>
           <small>Your climbs, collected.</small>
         </button>
       </nav>

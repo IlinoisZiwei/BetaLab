@@ -61,7 +61,7 @@ export function useAppController() {
   ])
   const [activeAttemptId, setActiveAttemptId] = useState("a1")
   const [manageMode, setManageMode] =
-    useState<null | "menu" | "visibility" | "delete">(null)
+    useState<null | "menu" | "edit" | "delete">(null)
   const [jobs, setJobs] = useState<Record<string, string>>({})
   const [libraryTab, setLibraryTab] = useState<LibraryTab>("attempts")
   const [workspaceSource, setWorkspaceSource] = useState(
@@ -340,7 +340,7 @@ export function useAppController() {
     route: "Route",
     workspace: "Beta Workspace",
     beta: "Community Beta",
-    library: "My Library",
+    library: "My Page",
   }
 
   const communitySampleVideos: CommunityFeedVideo[] = useMemo(
@@ -478,8 +478,7 @@ export function useAppController() {
     similarClimbers[0]
 
   const changeVideo = async (
-    visibility: "private" | "public",
-    share: boolean,
+    changes: Pick<UserVideo, "title" | "description" | "visibility" | "share_as_beta">,
   ) => {
     if (
       !session ||
@@ -493,14 +492,13 @@ export function useAppController() {
       const video = await api<UserVideo>(`/videos/${activeAttemptId}`, {
         method: "PATCH",
         csrf: session.csrf_token,
-        body: { visibility, share_as_beta: share },
+        body: changes,
       })
       if (epoch === authEpoch.current) {
         syncVideo(video)
-        flash("Video sharing updated")
+        flash("Video updated")
+        return true
       }
-    } catch (error) {
-      if (epoch === authEpoch.current) flash((error as Error).message)
     } finally {
       videoMutationBusy.current = false
     }
