@@ -65,7 +65,7 @@ function App() {
               event.pointerType !== "mouse" ||
               event.button !== 0 ||
               (event.target as HTMLElement).closest(
-                "button,a,input,textarea,select,video,summary",
+                "button,a,input,textarea,select,video,summary,[data-horizontal-swipe]",
               )
             )
               return
