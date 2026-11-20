@@ -42,7 +42,7 @@ BetaLab 将路线浏览、攀岩视频和基于身体比例的骨架预览连接
 | 新视频输入 | 输入提取、人工接触版本、局部标定；有测量输入时的墙面拼接/相机对齐与统一导出 | 真实手持视频标定数据、自动移动相机恢复、人体深度/源动作重建及适配 |
 | Trial2 几何 | v5 源动作与目标身材诊断预览 | 基线仍失败；源动作调查目前暂缓 |
 | 结果展示 | 示例、诊断和设有准入条件的技巧结果分开 | 当前流程尚未实现完整模型检查和真实技巧比较 |
-| 社区互动 | 持久化评论及一层回复、评论点赞、按时间点出现的弹幕、视频点赞/收藏/转发、想爬路线、关注；Community 分页；分享链接 | 作者主页与右滑入口（N2.8）、私有账号的关注规则（N1.2）；仓库预置示例仍为只读示例 |
+| 社区互动 | 持久化评论及一层回复、评论点赞、按时间点出现的弹幕（界面称 live comments）、视频点赞/收藏/转发、想爬路线、关注，上传视频与预置示例均支持；点击作者或右滑进入作者主页（N2.8）；Community 分页；分享链接 | 私有账号的关注规则与账号可见性（N1.2、N2.5）；接口见 `docs/SOCIAL_API.md` |
 
 任务完成表示计算和保存结束，不表示攀爬动作已通过几何或物理验证。
 
@@ -192,7 +192,7 @@ My skeletons 和 Notifications 入口仅位于 My Library 内的收藏分类上�
 | 通知 | `GET /notifications`；`PATCH /notifications/{id}/read` |
 | 评论 | `GET` / `POST /videos/{id}/comments`（一级评论，分页，含 `total_with_replies`）；`GET /comments/{id}/replies`；`DELETE /comments/{id}`（仅作者）；`PUT` / `DELETE /comments/{id}/like` |
 | 视频互动 | `PUT` / `DELETE /videos/{id}/like` 与 `/videos/{id}/save`；`POST /videos/{id}/share`；`GET /videos/{id}/danmaku`；`GET /social/videos?ids=`（最多 100 个视频的计数与本人状态）；`GET /me/saved-videos` |
-| 路线与关注 | `GET /me/wanted-routes`；`PUT` / `DELETE /routes/{id}/want`；`PUT` / `DELETE` / `GET /users/{id}/follow`；`GET /me/following` |
+| 路线与关注 | `GET /me/wanted-routes`；`PUT` / `DELETE /routes/{id}/want`；`PUT` / `DELETE` / `GET /users/{id}/follow`；`GET /me/following`；`GET /users/{id}/profile`（作者主页，仅公开视图） |
 
 以上路由均有 `/api` 前缀。精确请求结构以交互 OpenAPI 为准。计算 [schema 和 fixture](docs/compute/examples/) 保留为机器可读示例；实际模型以 `contracts.py`、`input_schema.py` 为准。在 API 环境使用 `python -m backend.compute.export_examples` 导出示例。
 
