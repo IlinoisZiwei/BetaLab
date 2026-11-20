@@ -164,11 +164,15 @@ button:disabled { opacity:.4; cursor:not-allowed; }
 .video-ready i { width:5px; height:5px; border-radius:50%; background:#7f9db9; }
 
 .workspace-video-header { padding:17px 0 6px; }
-.workspace-title-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.workspace-title-row { position:relative; display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .workspace-video-header h1 { margin:0; font-size:22px; font-weight:650; line-height:1.3; letter-spacing:-.4px; color:#253e53; }
 .workspace-more { width:32px; height:32px; flex-shrink:0; border:0; border-radius:50%; background:transparent; color:#65829b; font:inherit; font-size:22px; cursor:pointer; }
 .workspace-more:hover { background:#e5eff8; }
 .workspace-more:focus-visible { outline:2px solid #315fce; outline-offset:2px; }
+.workspace-menu { position:absolute; z-index:10; top:calc(100% + 6px); right:0; display:flex; min-width:148px; flex-direction:column; padding:5px; border:1px solid #cbdce9; border-radius:11px; background:#fff; box-shadow:0 8px 24px #18344a22; }
+.workspace-menu button { width:100%; padding:9px 11px; border:0; border-radius:7px; background:transparent; color:#31516a; font:inherit; font-size:13px; text-align:left; cursor:pointer; }
+.workspace-menu button:hover,.workspace-menu button:focus-visible { background:#edf5fb; color:#214c70; }
+.workspace-menu button:focus-visible { outline:2px solid #315fce; outline-offset:-2px; }
 .workspace-route-meta { display:flex; align-items:center; gap:9px; margin-top:6px; font-size:13px; color:#526c83; }
 .workspace-grade { padding:2px 7px; border-radius:6px; background:#e1edf8; color:#416487; font-size:11px; font-weight:600; }
 .workspace-set { color:#8596a5; font-size:11px; }

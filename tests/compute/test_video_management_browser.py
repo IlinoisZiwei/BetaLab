@@ -50,11 +50,11 @@ class VideoManagementBrowserTest(unittest.TestCase):
             video_id=upload.value.json()['id']
             def visibility(value):
                 page.get_by_role('button',name='Manage my video',exact=True).click()
-                page.get_by_role('button',name='Change visibility',exact=True).click()
+                page.get_by_role('menuitem',name='Edit video',exact=True).click()
                 with page.expect_response(lambda r:r.url.endswith('/api/videos/'+video_id) and r.request.method=='PATCH') as update:
-                    page.get_by_role('button',name=value,exact=True).click()
+                    page.get_by_role('radio',name=value,exact=True).check()
+                    page.get_by_role('button',name='Save changes',exact=True).click()
                 self.assertEqual(update.value.status,200)
-                page.get_by_role('button',name='Done',exact=True).click()
             visibility('Public')
             self.assertEqual(self.alice.get('/api/videos/'+video_id).status_code,200)
             page.get_by_role('button',name='Community',exact=True).last.click()

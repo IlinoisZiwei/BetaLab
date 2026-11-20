@@ -80,14 +80,36 @@ export function WorkspacePage({
             <span className="workspace-title-grade">{selectedRoute.grade}</span>
           </h1>
           {hasAttempt && isOwnUploadedVideo && (
-            <button
-              type="button"
-              className="workspace-more"
-              aria-label="Manage my video"
-              onClick={() => setManageMode(manageMode ? null : "menu")}
-            >
-              ⋯
-            </button>
+            <>
+              <button
+                type="button"
+                className="workspace-more"
+                aria-label="Manage my video"
+                aria-haspopup="menu"
+                aria-expanded={manageMode === "menu"}
+                onClick={() => setManageMode(manageMode ? null : "menu")}
+              >
+                ⋯
+              </button>
+              {manageMode === "menu" && (
+                <div className="workspace-menu" role="menu" aria-label="Video options">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => setManageMode("edit")}
+                  >
+                    Edit video
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => setManageMode("delete")}
+                  >
+                    Delete video
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
         <div className="workspace-info-line">
@@ -142,22 +164,6 @@ export function WorkspacePage({
         <>
           {isOwnUploadedVideo && manageMode && (
             <section className="video-management">
-              {manageMode === "menu" && (
-                <>
-                  <button
-                    className="btn btn-outline"
-                    onClick={() => setManageMode("edit")}
-                  >
-                    Edit video
-                  </button>
-                  <button
-                    className="btn btn-outline"
-                    onClick={() => setManageMode("delete")}
-                  >
-                    Delete video
-                  </button>
-                </>
-              )}
               {manageMode === "edit" && activeVideo && (
                 <EditVideoForm key={activeVideo.id} video={activeVideo} save={changeVideo} close={() => setManageMode(null)} />
               )}
