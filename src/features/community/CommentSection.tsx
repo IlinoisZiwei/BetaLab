@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { ApiError, type Session } from "../../api"
-import { announceDanmaku, COMMENT_MAX, formatCommentTime, formatVideoTime, isUserVideoId, socialApi, type CommentItem } from "./social"
+import { announceDanmaku, COMMENT_MAX, formatCommentTime, formatVideoTime, isSocialVideoId, socialApi, type CommentItem } from "./social"
 
 type Props = {
   videoId: string
@@ -42,7 +42,7 @@ export function CommentSection({ videoId, session, onSignIn, onCountChange, getC
   const request = useRef(0)
   const input = useRef<HTMLTextAreaElement>(null)
   const userId = session?.user.id ?? null
-  const interactive = isUserVideoId(videoId)
+  const interactive = isSocialVideoId(videoId)
 
   const handleError = (error: unknown, fallback: (message: string) => void) => {
     if (error instanceof ApiError && error.status === 401) return onSignIn()
@@ -216,7 +216,7 @@ export function CommentSection({ videoId, session, onSignIn, onCountChange, getC
   if (!interactive) {
     return <section className="comment-section" aria-label="Comments">
       <div className="comments-heading"><h2>Comments</h2></div>
-      <div className="comments-empty"><strong>Sample video</strong><p>Comments are available on videos uploaded by climbers.</p></div>
+      <div className="comments-empty"><strong>Comments unavailable</strong><p>This video does not take comments.</p></div>
     </section>
   }
 
@@ -235,7 +235,7 @@ export function CommentSection({ videoId, session, onSignIn, onCountChange, getC
         {replyTarget && <div className="replying-to"><span>Replying to <b>@{name(replyTarget.author)}</b></span><button type="button" aria-label="Cancel reply" onClick={() => { setReplyTarget(null); setExpanded(!!draft.trim()) }}>×</button></div>}
         <textarea ref={input} rows={1} onFocus={() => setExpanded(true)} aria-label={replyTarget ? `Reply to ${name(replyTarget.author)}` : "Write a comment"} placeholder={replyTarget ? "Write a reply…" : "Add a comment…"} maxLength={COMMENT_MAX} value={draft} onChange={e => setDraft(e.target.value)} />
         <div className="comment-compose-footer">
-          <span>{draft.length > 400 ? `${draft.length}/${COMMENT_MAX}` : expanded && currentTime !== undefined && Number.isFinite(currentTime) ? `Appears as danmaku at ${formatVideoTime(currentTime)}` : ""}</span>
+          <span>{draft.length > 400 ? `${draft.length}/${COMMENT_MAX}` : expanded && currentTime !== undefined && Number.isFinite(currentTime) ? `Shows on the video at ${formatVideoTime(currentTime)}` : ""}</span>
           <button type="button" className="comment-post" disabled={!!session && (!draft.trim() || posting)} onClick={() => void post()}>{!session ? "Sign in to post" : posting ? "Posting…" : replyTarget ? "Reply" : "Post"}</button>
         </div>
       </div>

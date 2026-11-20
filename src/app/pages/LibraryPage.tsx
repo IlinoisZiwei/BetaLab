@@ -21,6 +21,7 @@ export function LibraryPage({
   libraryItems,
   openRoute,
   savedVideos,
+  openSavedSample,
 }: Props) {
   return (
     <main className="screen with-header library-page">
@@ -229,8 +230,13 @@ export function LibraryPage({
                     go("workspace")
                   }
                 } else if (item.target === "saved") {
-                  // B2.7: a saved Community video opens in the workspace like a route Beta.
+                  // B2.7: a saved Community video opens in the workspace like a route Beta;
+                  // a saved bundled sample opens where it lives (Community viewer or Beta page).
                   const video = savedVideos.find((entry) => entry.id === item.id)
+                  if (video?.is_preset_sample) {
+                    openSavedSample(video)
+                    return
+                  }
                   const route =
                     catalogRoutes.find((entry) => entry.id === item.routeId) ??
                     routes.find((entry) => entry.id === item.routeId)

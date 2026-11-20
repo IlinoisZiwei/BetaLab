@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type MutableRefObject } from "react"
 import { ApiError, api, type Session, type UserVideo } from "../../api"
-import { isUserVideoId, shareLink, socialApi, videoShareUrl, type SavedVideo, type SocialSummary } from "./social"
+import { isSocialVideoId, isUserVideoId, SAMPLE_SOCIAL_IDS, shareLink, socialApi, videoShareUrl, type SavedVideo, type SocialSummary } from "./social"
 
 type Options = {
   session: Session | null
@@ -74,10 +74,10 @@ export function useSocial({ session, authEpoch, flash, onExpired, visibleVideos,
   }, [session?.user.id])
 
   // Counts for every uploaded video on screen, once per id per session.
-  const idsKey = [...visibleVideos, ...savedVideos].map(video => video.id).join(",")
+  const idsKey = [...visibleVideos.map(video => video.id), ...savedVideos.map(video => video.id), ...SAMPLE_SOCIAL_IDS].join(",")
   useEffect(() => {
     if (!session || !idsKey) return
-    const missing = idsKey.split(",").filter(id => isUserVideoId(id) && !requested.current.has(id))
+    const missing = idsKey.split(",").filter(id => isSocialVideoId(id) && !requested.current.has(id))
     if (!missing.length) return
     missing.forEach(id => requested.current.add(id))
     const epoch = authEpoch.current
@@ -104,7 +104,7 @@ export function useSocial({ session, authEpoch, flash, onExpired, visibleVideos,
   }, [session?.user.id])
 
   const toggleSocial = async (videoId: string, field: "liked" | "saved") => {
-    if (!isUserVideoId(videoId)) { flash("Sample videos can't be liked or saved."); return }
+    if (!isSocialVideoId(videoId)) return
     if (!session) { onExpired(); return }
     const key = `${field}:${videoId}`
     if (pending.current.has(key)) return
@@ -181,7 +181,7 @@ export function useSocial({ session, authEpoch, flash, onExpired, visibleVideos,
     const result = await shareLink(video.title, url)
     if (result === "copied") flash("Link copied. People signed in to this BetaLab can open it.")
     else if (result === "failed") flash(`Copy this link: ${url}`)
-    if ((result === "shared" || result === "copied") && isUserVideoId(video.id) && session) {
+    if ((result === "shared" || result === "copied") && isSocialVideoId(video.id) && session) {
       const epoch = authEpoch.current
       try {
         const counted = await socialApi.share(video.id, session.csrf_token)

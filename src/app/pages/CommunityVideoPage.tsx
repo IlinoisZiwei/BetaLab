@@ -3,6 +3,7 @@ import { routes, CommunityVideoPlayer } from "../shared"
 import type { AppController } from "../useAppController"
 import { CommentSection } from "../../features/community/CommentSection"
 import { Danmaku } from "../../features/community/Danmaku"
+import { useRightSwipe } from "../../features/community/useRightSwipe"
 
 type Props = AppController["pages"]["communityVideoScreen"]
 
@@ -24,11 +25,18 @@ export function CommunityVideoPage({
   setExpandedCommunityDescription,
   following,
   toggleFollow,
+  openAuthor,
 }: Props) {
   // B2.8: comments open in a bottom sheet over the playing video, TikTok-style.
   const [commentsFor, setCommentsFor] = useState<string | null>(null)
   const videoElement = (videoId: string) =>
     document.getElementById(`community-video-${videoId}`)?.querySelector("video") ?? null
+  // N2.8: swipe right (or drag right with a mouse) on a video to open its author's page.
+  const swipe = useRightSwipe((startedOn) => {
+    const slide = startedOn.closest(".community-tiktok-slide")
+    const video = communityVideos.find((item) => slide?.id === `community-video-${item.id}`)
+    if (video && !commentsFor) openAuthor(video)
+  })
   return (
     <main className="community-tiktok">
       {communityVideos.length === 0 ? (
@@ -40,6 +48,7 @@ export function CommunityVideoPage({
         <div
           className="community-tiktok-scroll"
           key={communityVideoId ?? "community"}
+          {...swipe}
         >
           {communityVideos.map((video) => {
             const route =
@@ -114,11 +123,16 @@ export function CommunityVideoPage({
                   <button
                     type="button"
                     className={`danmaku-action${danmakuOn ? " is-on" : ""}`}
-                    aria-label="Show danmaku"
+                    aria-label="Show live comments on the video"
+                    title={danmakuOn ? "Hide live comments" : "Show live comments"}
                     aria-pressed={danmakuOn}
                     onClick={toggleDanmaku}
                   >
-                    <span aria-hidden="true">弹</span>
+                    <span aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <path d="M5 8h9M5 12h14M9 16h8" />
+                      </svg>
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -132,16 +146,23 @@ export function CommunityVideoPage({
                 </aside>
                 <div className="community-tiktok-caption">
                   <div className="community-tiktok-author">
-                    <span>
-                      {(video.display_name || video.username || "C")
-                        .slice(0, 1)
-                        .toUpperCase()}
-                    </span>
-                    <strong>
-                      {video.display_name ||
-                        video.username ||
-                        "Community member"}
-                    </strong>
+                    <button
+                      type="button"
+                      className="author-link"
+                      aria-label={`Open ${video.display_name || video.username || "this climber"}'s page`}
+                      onClick={() => openAuthor(video)}
+                    >
+                      <span>
+                        {(video.display_name || video.username || "C")
+                          .slice(0, 1)
+                          .toUpperCase()}
+                      </span>
+                      <strong>
+                        {video.display_name ||
+                          video.username ||
+                          "Community member"}
+                      </strong>
+                    </button>
                     {/* N2.7: follow real uploaders other than yourself; samples have no account. */}
                     {!video.is_preset_sample && session && video.owner_id !== session.user.id && (
                       <button

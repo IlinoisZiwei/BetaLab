@@ -1,5 +1,6 @@
 import { AppButton, MediaVideo, PlaybackButton } from "../shared"
 import type { AppController } from "../useAppController"
+import { socialVideoKey } from "../../features/community/social"
 
 type Props = AppController["pages"]["betaDetailScreen"]
 
@@ -14,6 +15,7 @@ export function BetaPage({
   setComputeVideo,
   renderComments,
 }: Props) {
+  const socialId = socialVideoKey(workspaceBetaId)
   return (
     <main className="screen with-header beta-detail-page">
       <header className="beta-video-info">
@@ -26,12 +28,12 @@ export function BetaPage({
                 type="button"
                 aria-label="Like video"
                 title={
-                  social[workspaceBetaId]?.liked
+                  social[socialId]?.liked
                     ? "Unlike video"
                     : "Like video"
                 }
-                aria-pressed={!!social[workspaceBetaId]?.liked}
-                onClick={() => void toggleSocial(workspaceBetaId, "liked")}
+                aria-pressed={!!social[socialId]?.liked}
+                onClick={() => void toggleSocial(socialId, "liked")}
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" />
@@ -41,12 +43,12 @@ export function BetaPage({
                 type="button"
                 aria-label="Save beta"
                 title={
-                  social[workspaceBetaId]?.saved
+                  social[socialId]?.saved
                     ? "Remove saved beta"
                     : "Save beta"
                 }
-                aria-pressed={!!social[workspaceBetaId]?.saved}
-                onClick={() => void toggleSocial(workspaceBetaId, "saved")}
+                aria-pressed={!!social[socialId]?.saved}
+                onClick={() => void toggleSocial(socialId, "saved")}
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z" />

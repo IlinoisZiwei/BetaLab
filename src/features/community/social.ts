@@ -1,4 +1,4 @@
-// B: comments, likes, saved beta and want-to-try routes. Contract: backend/API.md "评论与互动".
+// B: Community interactions API (comments, likes, saves, shares, danmaku, wanted routes, follows). Contract: README "Backend and API contracts".
 import { api, type UserVideo } from "../../api"
 
 type PublicAuthor = { id: string; username: string; display_name: string }
@@ -22,13 +22,53 @@ export type CommentItem = {
 export type CommentPage = { items: CommentItem[]; total: number; total_with_replies?: number; limit: number; offset: number }
 export type DanmakuItem = { id: string; body: string; time_s: number; author: string; mine: boolean }
 export type SocialSummary = { like_count: number; comment_count: number; share_count: number; liked: boolean; saved: boolean }
-export type SavedVideo = UserVideo & { saved_at: string }
+export type SavedUpload = UserVideo & { saved_at: string; is_preset_sample?: false }
+/** A saved bundled sample: the server only knows its id; the app holds its media. */
+export type SavedSample = { id: string; title: string; duration_seconds: number; is_preset_sample: true; saved_at: string }
+export type SavedVideo = SavedUpload | SavedSample
+export const isSavedUpload = (video: SavedVideo): video is SavedUpload => !video.is_preset_sample
+
+/** GET /api/users/{id}/profile: what anyone signed in may see of an account (N2.8). */
+export type PublicProfile = {
+  id: string
+  username: string
+  display_name: string
+  joined_at: string
+  /** Always "public" until account visibility (N2.5) lands. */
+  account_visibility: "public" | "private"
+  is_me: boolean
+  follower_count: number
+  following_count: number
+  following: boolean
+  public_video_count: number
+  videos: (UserVideo & { username: string; display_name: string })[]
+  limit: number
+  offset: number
+}
 
 export const COMMENT_MAX = 500
 
-/** Only uploaded videos (UUID ids) can be commented, liked or saved; bundled samples cannot. */
+/** Uploaded videos and accounts use UUID ids. */
 export const isUserVideoId = (id: string | null | undefined): id is string =>
   !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+
+/** Bundled sample and preset Beta videos (e.g. "sample-a1", "preset-beta-b1"). */
+export const isSampleVideoId = (id: string | null | undefined): id is string =>
+  !!id && /^(sample|preset-beta)-[a-z0-9-]+$/.test(id)
+
+/** Videos that take likes, saves, comments, danmaku and shares: uploads and bundled samples. */
+export const isSocialVideoId = (id: string | null | undefined): id is string =>
+  isUserVideoId(id) || isSampleVideoId(id)
+
+/** Every bundled sample the server knows (backend/db/migrations/014_social_sample_videos.sql). */
+export const SAMPLE_SOCIAL_IDS = ["sample-a1", "sample-a2", "sample-a3", "preset-beta-b1", "preset-beta-b2", "preset-beta-b3"]
+
+/**
+ * The social id of a video as pages name it: sample attempts ("a1") and preset
+ * Beta climbers ("b1") map to their Community ids; uploads keep their UUID.
+ */
+export const socialVideoKey = (id: string) =>
+  /^a\d+$/.test(id) ? `sample-${id}` : /^b\d+$/.test(id) ? `preset-beta-${id}` : id
 
 export const socialApi = {
   comments: (videoId: string, offset = 0, limit = 20) =>
@@ -48,9 +88,9 @@ export const socialApi = {
     api<{ liked: boolean; like_count: number }>(`/videos/${encodeURIComponent(videoId)}/like`, { method: liked ? "PUT" : "DELETE", csrf }),
   setSaved: (videoId: string, saved: boolean, csrf: string) =>
     api<{ saved: boolean }>(`/videos/${encodeURIComponent(videoId)}/save`, { method: saved ? "PUT" : "DELETE", csrf }),
-  /** Fetches summaries for any number of ids, 100 per request; non-user ids are skipped. */
+  /** Fetches summaries for any number of ids, 100 per request; other ids are skipped. */
   summaries: async (ids: string[]) => {
-    const unique = [...new Set(ids.filter(isUserVideoId))]
+    const unique = [...new Set(ids.filter(isSocialVideoId))]
     const result: Record<string, SocialSummary> = {}
     for (let i = 0; i < unique.length; i += 100) {
       const chunk = unique.slice(i, i + 100)
@@ -62,6 +102,8 @@ export const socialApi = {
   following: () => api<{ items: { id: string; username: string; display_name: string; followed_at: string }[] }>("/me/following"),
   setFollowing: (userId: string, following: boolean, csrf: string) =>
     api<{ following: boolean; follower_count: number }>(`/users/${encodeURIComponent(userId)}/follow`, { method: following ? "PUT" : "DELETE", csrf }),
+  profile: (userId: string, offset = 0, limit = 20) =>
+    api<PublicProfile>(`/users/${encodeURIComponent(userId)}/profile?limit=${limit}&offset=${offset}`),
   wantedRoutes: () => api<{ items: { route_id: string; created_at: string }[] }>("/me/wanted-routes"),
   setWanted: (routeId: string, wanted: boolean, csrf: string) =>
     api<{ wanted: boolean }>(`/routes/${encodeURIComponent(routeId)}/want`, { method: wanted ? "PUT" : "DELETE", csrf }),

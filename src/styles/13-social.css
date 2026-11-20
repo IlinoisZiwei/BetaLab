@@ -28,7 +28,8 @@
 .danmaku-layer.is-paused .danmaku { animation-play-state:paused; }
 @keyframes danmaku-fly { from { transform:translateX(0); } to { transform:translateX(calc(-1 * var(--travel, 420px) - 100%)); } }
 @media (prefers-reduced-motion: reduce) { .danmaku { animation-duration:12s; } }
-.community-tiktok-actions .danmaku-action span { display:grid; width:30px; height:30px; place-items:center; border:1.8px solid currentColor; border-radius:8px; font-size:15px; font-weight:700; opacity:.65; }
+.community-tiktok-actions .danmaku-action span { display:grid; width:30px; height:30px; place-items:center; border:1.8px solid currentColor; border-radius:8px; opacity:.65; }
+.community-tiktok-actions .danmaku-action span svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; }
 .community-tiktok-actions .danmaku-action.is-on span { opacity:1; background:#fff; color:#111; border-color:#fff; }
 .community-tiktok-actions .share-action svg { fill:transparent; }
 .community-tiktok-actions { gap:14px; bottom:120px; }
@@ -48,3 +49,33 @@ button.comment-time { cursor:pointer; }
 .community-tiktok-author .follow-button { flex:0 0 auto; padding:3px 12px; border:1px solid #fff; border-radius:999px; background:#ff3b61; border-color:#ff3b61; color:#fff; font:inherit; font-size:12px; font-weight:600; line-height:18px; cursor:pointer; }
 .community-tiktok-author .follow-button.is-following { background:transparent; border-color:#ffffffa0; color:#fff; }
 .community-tiktok-author .follow-button:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+
+/* N2.8: author link in the Community viewer and the author page. */
+.community-tiktok-author .author-link { display:flex; align-items:center; gap:8px; min-width:0; padding:0; border:0; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+.community-tiktok-author .author-link > span { display:grid; flex:0 0 34px; width:34px; height:34px; place-items:center; border:1px solid #ffffff99; border-radius:50%; background:#477da5; font-weight:700; }
+.community-tiktok-author .author-link:focus-visible { outline:2px solid #fff; outline-offset:3px; border-radius:18px; }
+.author-page { display:grid; gap:18px; align-content:start; }
+.author-hero { display:grid; grid-template-columns:64px 1fr; gap:12px 14px; align-items:center; padding:18px; border-radius:16px; background:#fff; box-shadow:0 1px 3px #0f2a4014; }
+.author-avatar { display:grid; width:64px; height:64px; place-items:center; border-radius:50%; background:#477da5; color:#fff; font-size:26px; font-weight:700; }
+.author-identity h1 { margin:0; font-size:21px; line-height:1.2; }
+.author-identity small { color:#6a7f91; }
+.author-stats { grid-column:1 / -1; display:grid; grid-template-columns:repeat(3,1fr); margin:0; text-align:center; }
+.author-stats dt { color:#6a7f91; font-size:12px; }
+.author-stats dd { margin:2px 0 0; font-size:18px; font-weight:700; }
+.author-follow { grid-column:1 / -1; min-height:42px; border:1px solid #ff3b61; border-radius:999px; background:#ff3b61; color:#fff; font:inherit; font-weight:700; cursor:pointer; }
+.author-follow.is-following { background:transparent; color:#c4223f; }
+.author-follow:focus-visible { outline:2px solid #315fce; outline-offset:2px; }
+.author-self-note { grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
+.author-self-note p { margin:0; color:#4b6275; font-size:14px; }
+.author-videos h2 { margin:0 0 10px; font-size:17px; }
+.author-video-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; margin:0; padding:0; list-style:none; }
+.author-video-grid button { display:grid; gap:4px; width:100%; padding:0; border:0; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+.author-video-grid button > :first-child { aspect-ratio:9 / 14; width:100%; overflow:hidden; border-radius:12px; object-fit:cover; }
+.author-video-grid span { overflow:hidden; font-size:14px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+.author-video-grid small { color:#315fce; font-size:12px; }
+.author-video-grid button:focus-visible { outline:2px solid #315fce; outline-offset:2px; border-radius:12px; }
+.author-privacy-note { margin:14px 0 0; color:#6a7f91; font-size:13px; }
+/* Expanded composer: text on its own row, hint and Post underneath, so long hints never squeeze the text. */
+.compact-composer.is-expanded > .comment-input-wrap { flex-wrap:wrap; }
+.comment-section .compact-composer.is-expanded textarea { flex:1 0 100%; width:100%; }
+.compact-composer.is-expanded .comment-compose-footer { flex:1 0 100%; justify-content:space-between; padding:0 6px 5px 11px; }
