@@ -118,9 +118,12 @@ async def upload_video(request: Request, route_id: str = Form(...), visibility: 
 
 @router.get('/api/videos')
 def list_videos(owned: bool = True, route_id: str | None = None, share_as_beta: bool | None = None,
-                limit: int = 50, offset: int = 0, session=Depends(current_session)):
+                following: bool = False, limit: int = 50, offset: int = 0,
+                session=Depends(current_session)):
     if not 1 <= limit <= 100 or offset < 0:
         raise HTTPException(422, 'Invalid pagination')
+    if owned and following:
+        raise HTTPException(422, 'Following feed is only available for public videos')
     with database() as db:
         if owned:
             rows = db.execute('SELECT * FROM user_videos WHERE owner_id=%s AND (%s::text IS NULL OR route_id=%s) '
@@ -132,8 +135,12 @@ def list_videos(owned: bool = True, route_id: str | None = None, share_as_beta: 
                               'CASE WHEN v.share_as_beta THEN u.arm_span_cm ELSE NULL END AS arm_span_cm '
                               'FROM user_videos v JOIN users u ON u.id=v.owner_id '
                               'WHERE v.visibility=\'public\' AND (%s::text IS NULL OR v.route_id=%s) '
-                              'AND (%s::boolean IS NULL OR v.share_as_beta=%s) ORDER BY v.created_at DESC LIMIT %s OFFSET %s',
-                              (route_id, route_id, share_as_beta, share_as_beta, limit, offset)).fetchall()
+                              'AND (%s::boolean IS NULL OR v.share_as_beta=%s) '
+                              'AND (NOT %s OR EXISTS (SELECT 1 FROM follows f '
+                              'WHERE f.follower_id=%s AND f.followee_id=v.owner_id)) '
+                              'ORDER BY v.created_at DESC LIMIT %s OFFSET %s',
+                              (route_id, route_id, share_as_beta, share_as_beta,
+                               following, session['id'], limit, offset)).fetchall()
     items = []
     for row in rows:
         item = video_dict(row)

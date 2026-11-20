@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { type Session } from '../../api'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { ApiError, type Session } from '../../api'
+import { socialApi, type SocialStats } from '../../features/community/social'
 import type { AppController } from '../useAppController'
 import { LibraryPage } from './LibraryPage'
 import '../../styles/my-page.css'
@@ -8,6 +9,31 @@ type Props = { session: Session; libraryProps: AppController['pages']['librarySc
 const dayKey = (date: Date) => date.toISOString().slice(0, 10)
 export function MyPage({ session, libraryProps, computeContent }: Props) {
   const [section, setSection] = useState<'library' | 'calendar'>('library')
+  const [socialStats, setSocialStats] = useState<SocialStats | null>(null)
+  const [socialStatsError, setSocialStatsError] = useState('')
+  const [socialStatsLoading, setSocialStatsLoading] = useState(false)
+  const socialRequest = useRef(0)
+  const loadSocialStats = useCallback(async () => {
+    const request = ++socialRequest.current
+    setSocialStatsLoading(true)
+    setSocialStatsError('')
+    try {
+      const stats = await socialApi.stats()
+      if (request === socialRequest.current) setSocialStats(stats)
+    } catch (error) {
+      if (request !== socialRequest.current) return
+      setSocialStatsError(error instanceof ApiError && error.status === 401
+        ? 'Your session expired. Sign in again to load social statistics.'
+        : (error as Error).message)
+    } finally {
+      if (request === socialRequest.current) setSocialStatsLoading(false)
+    }
+  }, [])
+  useEffect(() => {
+    setSocialStats(null)
+    void loadSocialStats()
+    return () => { socialRequest.current++ }
+  }, [session.user.id, loadSocialStats])
   useEffect(() => {
     const open = () => setSection('library')
     window.addEventListener('open-my-skeletons', open)
@@ -38,11 +64,18 @@ export function MyPage({ session, libraryProps, computeContent }: Props) {
   const days: Date[] = []
   for (let d = new Date(first); d <= last; d.setUTCDate(d.getUTCDate() + 1)) days.push(new Date(d))
   const count = (key: string) => [...(records.get(key)?.values() ?? [])].reduce((n, g) => n + g.count, 0)
+  const statItems: { label: string; value: number | undefined }[] = [
+    {label:'Likes received', value:socialStats?.likes_received},
+    {label:'Saves received', value:socialStats?.saves_received},
+    {label:'Followers', value:socialStats?.followers},
+    {label:'Following', value:socialStats?.following},
+  ]
   const intro = <>
     <section className="my-page-profile" aria-label="My profile">
       <div className="my-page-identity"><span className="my-page-avatar" aria-hidden="true">{user.display_name.slice(0, 1).toUpperCase()}</span><div><h1>{user.display_name}</h1><p>@{user.username}</p></div><button type="button" onClick={() => libraryProps.go('profile')}>Edit profile</button></div>
       {user.bio && <p className="my-page-bio">{user.bio}</p>}
-      <div className="my-page-stats" aria-label="Social statistics">{['Likes received', 'Saves received', 'Followers', 'Following'].map(label => <div key={label}><strong>0</strong><span>{label}</span></div>)}</div>
+      <div className="my-page-stats" aria-label="Social statistics" aria-busy={socialStatsLoading}>{statItems.map(item => <div key={item.label}><strong>{item.value ?? '—'}</strong><span>{item.label}</span></div>)}</div>
+      {socialStatsError && <div className="my-page-stats-error" role="alert"><span>{socialStatsError}</span><button type="button" disabled={socialStatsLoading} onClick={() => void loadSocialStats()}>{socialStatsLoading ? 'Loading…' : 'Try again'}</button></div>}
     </section>
     <nav className="my-page-sections" aria-label="My Page sections"><button className={section === 'library' ? 'active' : ''} onClick={() => setSection('library')}>My Library</button><button className={section === 'calendar' ? 'active' : ''} onClick={() => {showMonth(new Date().getUTCMonth());setSection('calendar')}}>My Calendar</button></nav>
   </>

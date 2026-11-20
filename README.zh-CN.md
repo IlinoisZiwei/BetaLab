@@ -42,7 +42,7 @@ BetaLab 将路线浏览、攀岩视频和基于身体比例的骨架预览连接
 | 新视频输入 | 输入提取、人工接触版本、局部标定；有测量输入时的墙面拼接/相机对齐与统一导出 | 真实手持视频标定数据、自动移动相机恢复、人体深度/源动作重建及适配 |
 | Trial2 几何 | v5 源动作与目标身材诊断预览 | 基线仍失败；源动作调查目前暂缓 |
 | 结果展示 | 示例、诊断和设有准入条件的技巧结果分开 | 当前流程尚未实现完整模型检查和真实技巧比较 |
-| 社区互动 | 持久化评论及一层回复、评论点赞、按时间点出现的弹幕（界面称 live comments）、视频点赞/收藏/转发、想爬路线、关注，上传视频与预置示例均支持；点击作者或右滑进入作者主页（N2.8）；Community 分页；分享链接 | 私有账号的关注规则与账号可见性（N1.2、N2.5）；接口见 `docs/SOCIAL_API.md` |
+| 社区互动 | 持久化评论及一层回复、评论点赞、按时间点出现的弹幕（界面称 live comments）、视频点赞/收藏/转发、想爬路线、关注，上传视频与预置示例均支持；点击作者或右滑进入作者主页（N2.8）；All / Following 公开视频流；可拖动的小视频时间轴；Attempts 中清晰的可见性切换；My Page 真实社交统计；Community 分页；分享链接 | 私有账号关注批准、公开点赞/收藏列表和真实设备演练；接口见 `docs/SOCIAL_API.md` |
 
 任务完成表示计算和保存结束，不表示攀爬动作已通过几何或物理验证。
 
@@ -306,7 +306,7 @@ python3 -m backend.db.backup restore backups/<目录> --yes
 ```sh
 npx tsc --noEmit
 npm run build
-node --experimental-transform-types --test tests/frontend/*.test.ts tests/build/*.test.ts
+node --test tests/frontend/*.test.ts tests/build/*.test.ts
 backend/.venv/bin/pip install -r backend/requirements-test.txt
 backend/.venv/bin/python -m unittest discover -s tests/compute -v
 ```

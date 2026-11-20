@@ -79,9 +79,16 @@ Example `GET /videos/preset-beta-b1/comments`:
 | `PUT` / `DELETE /routes/{id}/want` | `{wanted}`; `404` for unknown routes |
 | `PUT` / `DELETE` / `GET /users/{id}/follow` | `{following, follower_count}`; idempotent; `422` for yourself |
 | `GET /me/following` | `{items: [{id, username, display_name, followed_at}]}` |
+| `GET /me/social-stats` | `{likes_received, saves_received, followers, following}` for My Page |
+| `GET /videos?owned=false&following=true` | Newest public uploads from accounts the current user follows; pagination uses the normal `limit` / `offset` parameters |
 | `GET /users/{id}/profile?limit=20&offset=0` | Author page, described below |
 
 Following someone never unlocks their private videos.
+
+`/me/social-stats` counts persistent likes and saves received by the signed-in
+user's uploaded videos, plus their follower/following rows. Received counts are
+owner-only lifetime statistics: making a video private hides it from other
+people but does not erase its existing interactions from the owner's My Page.
 
 ### Author page (N2.8): `GET /users/{id}/profile`
 
@@ -117,5 +124,5 @@ These are recommendations, not settled rules. The checklist row stays open until
 
 1. **Private accounts and follows.** Recommended: follow requests that need approval, using a `follows.status` of `pending` or `accepted`. A pending request shows as "Requested". Approval still never grants access to private videos; videos keep their own visibility. Rejected alternative: open follows on private accounts, because they would reveal that the account exists and is active.
 2. **Follower and following lists.** Recommended: show counts only for the demo. Show lists to the owner only. Public lists can wait until account visibility exists.
-3. **Following feed.** Recommended: defer it. Community stays one feed, which is enough for the demo.
+3. **Following feed.** Implemented as an All / Following switch. Following is a server-filtered list of public uploads only; it excludes bundled presets and never grants access to private videos.
 4. **Self-view.** Your own author page shows the public view, with a link to My Library (implemented).

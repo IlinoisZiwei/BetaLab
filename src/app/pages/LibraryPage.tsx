@@ -23,6 +23,7 @@ export function LibraryPage({
   openRoute,
   savedVideos,
   openSavedSample,
+  setManageMode,
 }: Props) {
   return (
     <main className="screen with-header library-page">
@@ -144,57 +145,73 @@ export function LibraryPage({
                             </span>
                           </button>
                         ))}
-                        {videos.map((video) => (
-                          <button
-                            className="history-row"
-                            type="button"
-                            key={video.id}
-                            onClick={() => {
+                        {videos.map((video) => {
+                          const openAttempt = (editVisibility = false) => {
                               setSelectedRoute(route)
                               setSelectedGym(route.gym)
                               setActiveAttemptId(video.id)
                               setHasAttempt(true)
                               setWorkspaceEntry("attempt")
                               setWorkspaceSource(video.title)
+                              setManageMode(editVisibility ? "edit" : null)
                               go("workspace")
-                            }}
-                          >
-                            <span className="history-thumbnail">
-                              <VideoThumbnail
-                                src={video.content_url}
-                                alt={`${video.title} first frame`}
-                              />
-                              <span>
+                          }
+                          return (
+                          <div className="history-video-entry" key={video.id}>
+                            <button
+                              className="history-row"
+                              type="button"
+                              onClick={() => openAttempt()}
+                            >
+                              <span className="history-thumbnail">
+                                <VideoThumbnail
+                                  src={video.content_url}
+                                  alt={`${video.title} first frame`}
+                                />
+                                <span className={`attempt-visibility-badge is-${video.visibility}`}>
+                                  {video.visibility === "public" ? "Public" : "Private"}
+                                </span>
+                                <span className="history-duration">
                                 {Math.floor(video.duration_seconds / 60)}:
                                 {String(
                                   Math.floor(video.duration_seconds % 60),
                                 ).padStart(2, "0")}
                               </span>
-                            </span>
-                            <span className="history-entry-info">
-                              <strong>{video.title}</strong>
-                              <span className="history-date">
-                                {new Date(
-                                  video.created_at,
-                                ).toLocaleDateString()}
                               </span>
-                              <span className="history-status">
-                                {video.visibility === "public"
-                                  ? "Public"
-                                  : "Private"}
-                                {video.description
-                                  ? ` · ${video.description}`
-                                  : ""}
+                              <span className="history-entry-info">
+                                <strong>{video.title}</strong>
+                                <span className="history-date">
+                                  {new Date(
+                                    video.created_at,
+                                  ).toLocaleDateString()}
+                                </span>
+                                <span className="history-status">
+                                  {video.visibility === "public"
+                                    ? "Visible in Community"
+                                    : "Only visible to you"}
+                                  {video.description
+                                    ? ` · ${video.description}`
+                                    : ""}
+                                </span>
                               </span>
-                            </span>
-                            <span
-                              className="history-entry-arrow"
-                              aria-hidden="true"
+                              <span
+                                className="history-entry-arrow"
+                                aria-hidden="true"
+                              >
+                                ›
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              className="history-visibility-action"
+                              aria-label={`Change visibility for ${video.title}`}
+                              onClick={() => openAttempt(true)}
                             >
-                              ›
-                            </span>
-                          </button>
-                        ))}
+                              Change visibility
+                            </button>
+                          </div>
+                          )
+                        })}
                       </details>
                     )
                   })}

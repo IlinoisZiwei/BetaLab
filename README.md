@@ -42,7 +42,7 @@ The [GitHub Pages site](https://ilinoisziwei.github.io/BetaLab/) is a static fro
 | New-video inputs | Extraction, contact versions, local calibration; measured-input panel assembly/camera alignment and unified export | Real handheld calibration data, automatic moving-camera recovery, body depth/source reconstruction and adaptation |
 | Trial2 geometry | v5 source and target diagnostic previews | Baselines still fail; source-motion investigation is currently paused |
 | Result presentation | Separate examples, diagnostics and gated technique results | Full-model checks and real technique comparison are not implemented in the current flow |
-| Social interactions | Persistent comments with one level of replies, comment likes, timestamped live comments (danmaku), video likes/saves/shares, want-to-try routes and follow, on uploads and bundled samples alike; author page from a tap or right swipe (N2.8); Community feed paging; share links | Private-account follow rules and account visibility (N1.2, N2.5); see `docs/SOCIAL_API.md` |
+| Social interactions | Persistent comments with one level of replies, comment likes, timestamped live comments (danmaku), video likes/saves/shares, want-to-try routes and follow, on uploads and bundled samples alike; author page from a tap or right swipe (N2.8); All / Following public-video feeds; draggable short-video timeline; explicit attempt visibility controls; real My Page social statistics; Community feed paging; share links | Private-account follow approval, public liked/saved collections and real-device rehearsal; see `docs/SOCIAL_API.md` |
 
 Task completion means computation and storage finished. It does not mean the climbing movement passed geometric or physical validation.
 
@@ -306,7 +306,7 @@ Joint-center checks do not establish whole-body collision avoidance, balance, co
 ```sh
 npx tsc --noEmit
 npm run build
-node --experimental-transform-types --test tests/frontend/*.test.ts tests/build/*.test.ts
+node --test tests/frontend/*.test.ts tests/build/*.test.ts
 backend/.venv/bin/pip install -r backend/requirements-test.txt
 backend/.venv/bin/python -m unittest discover -s tests/compute -v
 ```

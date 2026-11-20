@@ -411,6 +411,27 @@ def following(session=Depends(current_session)):
                        'followed_at': r['created_at'].isoformat()} for r in rows]}
 
 
+@router.get('/api/me/social-stats')
+def my_social_stats(session=Depends(current_session)):
+    """Persistent counts for the signed-in user's My Page.
+
+    Likes and saves are counts received by this user's uploaded videos. Rows are
+    retained when a video becomes private, so the owner keeps an accurate
+    lifetime count while public pages continue to hide the video itself.
+    """
+    with database() as db:
+        row = db.execute(
+            'SELECT '
+            '(SELECT count(*) FROM video_likes l JOIN user_videos v ON v.id::text = l.video_id '
+            ' WHERE v.owner_id = %(user)s) AS likes_received, '
+            '(SELECT count(*) FROM saved_videos s JOIN user_videos v ON v.id::text = s.video_id '
+            ' WHERE v.owner_id = %(user)s) AS saves_received, '
+            '(SELECT count(*) FROM follows WHERE followee_id = %(user)s) AS followers, '
+            '(SELECT count(*) FROM follows WHERE follower_id = %(user)s) AS following',
+            {'user': session['id']}).fetchone()
+    return {key: row[key] for key in ('likes_received', 'saves_received', 'followers', 'following')}
+
+
 # --------------------------------------------------------- author page (N2.8)
 
 @router.get('/api/users/{user_id}/profile')

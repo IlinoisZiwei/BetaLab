@@ -74,6 +74,8 @@ class VisibilityMatrixTest(unittest.TestCase):
                          {'like_count': 0, 'comment_count': 0, 'share_count': 0, 'liked': False, 'saved': False})
 
     def test_lists_show_only_allowed_videos_and_body_data_only_for_beta(self):
+        privacy = {'account_visibility': 'public', 'calendar_visible': False, 'library_visible': True}
+        self.assertEqual(self.alice.patch('/api/profile/privacy', json=privacy).status_code, 200)
         feed = {v['id']: v for v in self.bob.get('/api/videos?owned=false&limit=100').json()['items']}
         self.assertNotIn(self.ids[PRIVATE], feed)
         self.assertIsNone(feed[self.ids[PUBLIC]]['height_cm'])
@@ -89,6 +91,29 @@ class VisibilityMatrixTest(unittest.TestCase):
             self.assertIsNone(shown[self.ids[PUBLIC]]['height_cm'])
         self.assertEqual(self.anonymous.get('/api/videos?owned=false').status_code, 401)
         self.assertEqual(self.anonymous.get(f'/api/users/{self.alice_id}/profile').status_code, 401)
+
+    def test_author_page_visibility_does_not_change_direct_video_visibility(self):
+        url = f'/api/users/{self.alice_id}/profile'
+        public_video = f'/api/videos/{self.ids[PUBLIC]}'
+        visible = {'account_visibility': 'public', 'calendar_visible': False, 'library_visible': True}
+        hidden_library = {**visible, 'library_visible': False}
+        private_account = {**visible, 'account_visibility': 'private'}
+        try:
+            self.alice.patch('/api/profile/privacy', json=visible)
+            shown = self.bob.get(url).json()
+            self.assertIn(self.ids[PUBLIC], [video['id'] for video in shown['videos']])
+            self.alice.patch('/api/profile/privacy', json=hidden_library)
+            self.assertEqual(self.bob.get(url).json()['videos'], [])
+            self.assertEqual(self.bob.get(public_video).status_code, 200)
+            self.alice.patch('/api/profile/privacy', json=private_account)
+            hidden = self.bob.get(url).json()
+            self.assertEqual(hidden['account_visibility'], 'private')
+            self.assertEqual(hidden['videos'], [])
+            self.assertEqual(hidden['public_video_count'], 0)
+            self.assertEqual(hidden['display_name'], '')
+            self.assertEqual(self.bob.get(public_video).status_code, 200)
+        finally:
+            self.alice.patch('/api/profile/privacy', json=visible)
 
     def test_turning_private_revokes_everything_and_public_restores_it(self):
         video = self.ids[PUBLIC]

@@ -293,6 +293,27 @@ class SocialTest(unittest.TestCase):
 
     # ----------------------------------------------------------- follows
 
+    def test_following_video_feed_contains_only_followed_public_uploads(self):
+        public = self.make_video(self.alice_id)
+        private = self.make_video(self.alice_id, 'private')
+        own_public = self.make_video(self.bob_id)
+        self.bob.delete(f'/api/users/{self.alice_id}/follow')
+        try:
+            self.assertEqual(self.bob.put(f'/api/users/{self.alice_id}/follow').status_code, 200)
+            response = self.bob.get('/api/videos?owned=false&following=true')
+            self.assertEqual(response.status_code, 200, response.text)
+            ids = {video['id'] for video in response.json()['items']}
+            self.assertIn(public, ids)
+            self.assertNotIn(private, ids)
+            self.assertNotIn(own_public, ids)
+            self.assertTrue(all(video['visibility'] == 'public' for video in response.json()['items']))
+            self.bob.delete(f'/api/users/{self.alice_id}/follow')
+            ids = {video['id'] for video in self.bob.get('/api/videos?owned=false&following=true').json()['items']}
+            self.assertNotIn(public, ids)
+            self.assertEqual(self.bob.get('/api/videos?owned=true&following=true').status_code, 422)
+        finally:
+            self.bob.delete(f'/api/users/{self.alice_id}/follow')
+
     def test_follow_is_idempotent_and_never_self(self):
         self.assertEqual(self.bob.put(f'/api/users/{self.alice_id}/follow').json(), {'following': True, 'follower_count': 1})
         self.assertEqual(self.bob.put(f'/api/users/{self.alice_id}/follow').json(), {'following': True, 'follower_count': 1})
@@ -316,6 +337,34 @@ class SocialTest(unittest.TestCase):
             self.assertNotIn(private, [v['id'] for v in self.bob.get('/api/videos?owned=false').json()['items']])
         finally:
             self.bob.delete(f'/api/users/{self.alice_id}/follow')
+
+    def test_my_social_stats_use_persistent_social_rows(self):
+        video = self.make_video(self.alice_id)
+        before = self.alice.get('/api/me/social-stats').json()
+        self.bob.put(f'/api/videos/{video}/like')
+        self.bob.put(f'/api/videos/{video}/save')
+        self.bob.put(f'/api/users/{self.alice_id}/follow')
+        try:
+            after = self.alice.get('/api/me/social-stats')
+            self.assertEqual(after.status_code, 200, after.text)
+            self.assertEqual(after.json(), {
+                'likes_received': before['likes_received'] + 1,
+                'saves_received': before['saves_received'] + 1,
+                'followers': before['followers'] + 1,
+                'following': before['following'],
+            })
+            bob = self.bob.get('/api/me/social-stats').json()
+            self.assertGreaterEqual(bob['following'], 1)
+            self.assertEqual(self.anonymous.get('/api/me/social-stats').status_code, 401)
+            # A visibility change hides the video from other pages but does not
+            # erase the owner's lifetime received-interaction counts.
+            self.set_visibility(video, 'private')
+            self.assertEqual(self.alice.get('/api/me/social-stats').json(), after.json())
+        finally:
+            self.set_visibility(video, 'public')
+            self.bob.delete(f'/api/users/{self.alice_id}/follow')
+            self.bob.delete(f'/api/videos/{video}/save')
+            self.bob.delete(f'/api/videos/{video}/like')
 
 
 if __name__ == '__main__':

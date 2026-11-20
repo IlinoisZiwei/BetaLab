@@ -16,7 +16,8 @@ class VideoManagementBrowserTest(unittest.TestCase):
     def test_navigation_sharing_delete_refresh_and_account_switch(self):
         from playwright.sync_api import sync_playwright,expect
         with sync_playwright() as p:
-            browser=p.chromium.launch();page=browser.new_page(viewport={'width':390,'height':844})
+            chrome=os.environ.get('BETALAB_CHROME')
+            browser=p.chromium.launch(**({'executable_path':chrome} if chrome else {}));page=browser.new_page(viewport={'width':390,'height':844})
             page.goto('http://127.0.0.1:5177')
             def login(name):
                 page.get_by_label('Username',exact=True).fill(name)
@@ -58,8 +59,16 @@ class VideoManagementBrowserTest(unittest.TestCase):
             self.assertEqual(self.alice.get('/api/videos/'+video_id).status_code,200)
             page.get_by_role('button',name='Community',exact=True).last.click()
             expect(page.locator('.community-feed-card').filter(has_text=title)).to_have_count(1)
-            library();open_attempt()
-            visibility('Private')
+            library()
+            page.locator('.attempt-gym-group > summary').filter(has_text='Test Gym').click()
+            page.locator('.attempt-route-group > summary').filter(has_text='Trial2').click()
+            expect(page.locator('.attempt-visibility-badge', has_text='Public')).to_be_visible()
+            page.get_by_role('button', name=f'Change visibility for {title}').click()
+            expect(page.get_by_role('heading', name='Edit video')).to_be_visible()
+            page.get_by_role('radio', name='Private', exact=True).check()
+            with page.expect_response(lambda r:r.url.endswith('/api/videos/'+video_id) and r.request.method=='PATCH') as update:
+                page.get_by_role('button', name='Save changes', exact=True).click()
+            self.assertEqual(update.value.status,200)
             self.assertEqual(self.alice.get('/api/videos/'+video_id+'/content').status_code,404)
             page.get_by_role('button',name='Community',exact=True).last.click()
             expect(page.locator('.community-feed-card').filter(has_text=title)).to_have_count(0)

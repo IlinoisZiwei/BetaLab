@@ -6,6 +6,7 @@ type Options = {
   session: Session | null
   screen: string
   routeId: string
+  followingOnly: boolean
   onError: (message: string) => void
 }
 
@@ -15,6 +16,7 @@ export function useVideoLibrary({
   session,
   screen,
   routeId,
+  followingOnly,
   onError,
 }: Options) {
   const [videos, dispatch] = useReducer(videoReducer, undefined, emptyVideos)
@@ -49,7 +51,7 @@ export function useVideoLibrary({
     try {
       const offset = reset ? 0 : videos.public.length
       const result = await api<{ items: UserVideo[] }>(
-        `/videos?owned=false&limit=${PUBLIC_PAGE}&offset=${offset}`,
+        `/videos?owned=false&following=${followingOnly}&limit=${PUBLIC_PAGE}&offset=${offset}`,
         { signal: controller.signal },
       )
       if (controller.signal.aborted) return
@@ -68,7 +70,7 @@ export function useVideoLibrary({
     lastScreen.current = screen
     if (session && screen === "community" && previous !== "communityVideo") void loadPublic(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user.id, screen])
+  }, [session?.user.id, screen, followingOnly])
   useEffect(() => () => publicRequest.current?.abort(), [session?.user.id])
   useEffect(() => {
     if (!session || screen !== "workspace" || !routeId) return

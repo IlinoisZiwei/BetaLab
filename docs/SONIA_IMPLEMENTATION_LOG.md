@@ -141,14 +141,32 @@ PR #2 增加移动端手势修复、可见性矩阵、手机浏览器检查、De
 
 环境限制项没有被记为产品逻辑通过，也没有据此取消真实设备和完整服务验收。
 
+### 2026-11-20：N2／N3 续作
+
+- 新增 `GET /api/me/social-stats`，把 My Page 原先硬编码的四个 0 接到持久化点赞、收藏、Followers 和 Following 数据。
+- My Page 统计增加加载状态、失败提示和 Try again；视频改为 Private 不会删除 owner-only 历史获赞／收藏统计。
+- 修正 N3.1 作者页矩阵的前置条件，并新增 Account Private／Library hidden 与单条 Public 视频直接访问互不混淆的组合检查。
+- 更新 B4.3 浏览器流程以使用当前 `My Page → Edit profile → Sign out` 路径，覆盖统计接口失败重试和账号切换后的真实统计。
+- 扩展 N3.2 自动化，除 390×844 触屏外，新增桌面右拖进入作者页、左拖返回和 Calendar 月份拖动。
+- 验证通过：完整 compute 发现 111 项（77 通过、34 按环境跳过），其中含 22 项 Social API、6 项可见性矩阵和 5 项 Profile／Privacy；另有 16 项前端／构建、1 项完整 Chromium 手机／桌面流程、TypeScript 和生产构建通过。
+- 将 `ApiError` 的 TypeScript parameter property 改为等价显式字段，并更新 README 测试命令，使 Node 26 strip-only 模式可直接执行全部前端测试。
+
+### 2026-11-20：Community 播放、Following feed 与 Attempts 可见性
+
+- Community 全屏小视频新增常驻时间轴，可拖动到指定秒数，并显示当前时间／总时长；时间轴会阻止横滑手势误触。
+- Community 列表在作者旁显示 Public／Preset 标识，并可直接 Follow／Unfollow；新增 All / Following 切换。
+- Following feed 使用服务端 `GET /api/videos?owned=false&following=true` 筛选，只返回已关注账号的 Public 上传，不包含预置视频，也不会解锁 Private 内容。
+- My Attempts 在缩略图上直接显示 Public／Private badge，并提供 `Change visibility` 快捷入口，直接打开现有 Edit video 表单切换。
+- 验证通过：23 项 Social API、16 项前端／构建测试、TypeScript、生产构建及完整 Chromium 手机／桌面社交流程。Attempts 浏览器用例的新增断言已写入，但当前机器缺少该用例要求的 `BETA_TRANSLATOR_ROOT` 科学夹具，因此未将它记为通过。
+
 ## 4. 当前状态
 
 | 任务 | 当前状态 | 仍需完成 |
 | --- | --- | --- |
-| B1.3 / B2.4 / N2.6 评论与社交 | 已实现并合并 | 团队阶段验收、真实跨设备确认 |
-| N2.7 Follow／Unfollow | 已实现并合并 | 私有账号关注批准、Followers／Following 列表和 Following feed 需先确认 N1.2 产品规则 |
-| N2.8 作者主页与手势入口 | 已实现并合并 | 真实手机与 A 的隐私组合联合验收 |
-| B4.3 / N3.1–N3.3 B 侧检查 | 自动化已实现并合并 | 目录、My Library、通知、旧数据恢复、真实任务连续性和跨设备联合验收 |
+| B1.3 / B2.4 / N2.6 评论与社交 | 实现与自动化自查完成 | 真实跨设备及团队阶段验收 |
+| N2.7 Follow／Unfollow | 实现、状态同步、列表快捷按钮、Following feed 与 My Page 统计完成 | 私有账号关注批准与 Followers／Following 列表需先确认 N1.2 产品规则 |
+| N2.8 作者主页与手势入口 | 手机／桌面自动化自查完成 | 真实手机与 A 的隐私组合联合验收 |
+| B4.3 / N3.1–N3.3 B 侧检查 | 数据库矩阵和 Chromium 手机／桌面流程完成 | 目录、通知真实任务、旧数据恢复、C 任务连续性和真正跨设备联合验收 |
 | A5.2 备份恢复工具 | Sonia 已实现并验证 | A 或非作者独立复现后确认 |
 | B5.2 Demo 账号与脚本 | 已实现并合并 | 在最终展示机器准备真实的 Git 忽略账号文件 |
 | B5.3 多人演练 | 未完成 | 记录设备、3–5 人同时操作、问题负责人和修复结果 |
@@ -159,14 +177,14 @@ PR #2 增加移动端手势修复、可见性矩阵、手机浏览器检查、De
 
 - 为通知和结果补齐独立 mock fixtures，覆盖 loading／empty／success／failure，并明确标注模拟来源（B1.4）。
 - 完善 suggestion 时间链接边界：重复点击、媒体未加载、时间超出视频长度（B4.2）。
-- 把现有社交持久化数据接入 My Page 的真实统计及授权的公开点赞／收藏列表；这需要遵守 A 已实现的隐私设置和页面接口。
+- 把现有社交持久化数据接入授权的公开点赞／收藏列表；My Page 四项本人统计已完成。
 - 在实际手机和桌面浏览器逐项执行 Community、评论、作者页和手势检查，并记录设备与结果。
 - 由非作者按 README 独立执行备份／验证／恢复，补充复现记录。
 
 ### 需要 A 协作
 
 - N1.2 私有账号 Follow approval、Followers／Following 可见性和公开分类规则定稿。
-- My Page 四项真实社交统计以及公开点赞／收藏分类的页面接入。
+- 公开点赞／收藏分类的页面接入；My Page 四项真实社交统计已完成。
 - Private 账号、Library 隐私、作者主页和公开资源组合的实机验收。
 - 局域网、Cookie／Origin 和可选隧道环境下的登录、上传和播放。
 

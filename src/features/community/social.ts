@@ -22,6 +22,7 @@ export type CommentItem = {
 export type CommentPage = { items: CommentItem[]; total: number; total_with_replies?: number; limit: number; offset: number }
 export type DanmakuItem = { id: string; body: string; time_s: number; author: string; mine: boolean }
 export type SocialSummary = { like_count: number; comment_count: number; share_count: number; liked: boolean; saved: boolean }
+export type SocialStats = { likes_received: number; saves_received: number; followers: number; following: number }
 export type SavedUpload = UserVideo & { saved_at: string; is_preset_sample?: false }
 /** A saved bundled sample: the server only knows its id; the app holds its media. */
 export type SavedSample = { id: string; title: string; duration_seconds: number; is_preset_sample: true; saved_at: string }
@@ -101,6 +102,7 @@ export const socialApi = {
   },
   savedVideos: () => api<{ items: SavedVideo[] }>("/me/saved-videos?limit=100"),
   following: () => api<{ items: { id: string; username: string; display_name: string; followed_at: string }[] }>("/me/following"),
+  stats: () => api<SocialStats>("/me/social-stats"),
   setFollowing: (userId: string, following: boolean, csrf: string) =>
     api<{ following: boolean; follower_count: number }>(`/users/${encodeURIComponent(userId)}/follow`, { method: following ? "PUT" : "DELETE", csrf }),
   profile: (userId: string, offset = 0, limit = 20) =>

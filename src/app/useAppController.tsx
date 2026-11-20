@@ -63,6 +63,7 @@ export function useAppController() {
   const [search, setSearch] = useState("")
   const [gradeFilter, setGradeFilter] = useState("All grades")
   const [communitySearch, setCommunitySearch] = useState("")
+  const [communityAudience, setCommunityAudience] = useState<"all" | "following">("all")
   const [communityGymFilter, setCommunityGymFilter] = useState("All gyms")
   const [communityGradeFilter, setCommunityGradeFilter] = useState("All grades")
   const [selectedGym, setSelectedGym] = useState("Movement Fishtown")
@@ -179,6 +180,7 @@ export function useAppController() {
       setAnalysisPendingVideoId(null)
       setComputeVideo(null)
       setCommunityVideoId(null)
+      setCommunityAudience("all")
       setCatalogError("")
       setScreen(value ? "home" : "account")
       setCatalog(null)
@@ -264,6 +266,7 @@ export function useAppController() {
     session,
     screen,
     routeId: selectedRoute.id,
+    followingOnly: communityAudience === "following",
     onError: setCatalogError,
   })
   const expireSession = () => {
@@ -291,6 +294,7 @@ export function useAppController() {
     onExpired: expireSession,
     visibleVideos: [...myVideos, ...publicVideos, ...routeBetaVideos],
     onOpenShared: (id, video) => {
+      setCommunityAudience("all")
       setCommunityVideoId(id)
       go("communityVideo")
       void refreshPublic(video ?? undefined)
@@ -429,7 +433,7 @@ export function useAppController() {
     () => betaCards.map((card) => presetBetaVideo(card.id)),
     [],
   )
-  const communityVideos: CommunityFeedVideo[] = useMemo(
+  const allCommunityVideos: CommunityFeedVideo[] = useMemo(
     () =>
       [
         ...publicVideos,
@@ -437,6 +441,12 @@ export function useAppController() {
         ...communityPresetBetaVideos,
       ].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)),
     [publicVideos, communitySampleVideos, communityPresetBetaVideos],
+  )
+  const communityVideos: CommunityFeedVideo[] = useMemo(
+    () => communityAudience === "following"
+      ? allCommunityVideos.filter(video => !video.is_preset_sample && following.includes(video.owner_id))
+      : allCommunityVideos,
+    [allCommunityVideos, communityAudience, following],
   )
   // Saved items resolved for My Library: uploads as returned, samples from the bundled feed.
   const savedLibraryVideos: (CommunityFeedVideo & { saved_at: string })[] = useMemo(
@@ -461,12 +471,14 @@ export function useAppController() {
     go("author")
   }
   const openAuthorVideo = (video: UserVideo) => {
+    setCommunityAudience("all")
     setCommunityVideoId(video.id)
     go("communityVideo")
     void refreshPublic(video)
   }
   const openSavedSample = (video: CommunityFeedVideo) => {
-    if (communityVideos.some((item) => item.id === video.id)) {
+    if (allCommunityVideos.some((item) => item.id === video.id)) {
+      setCommunityAudience("all")
       setCommunityVideoId(video.id)
       go("communityVideo")
     } else if (video.is_preset_beta) {
@@ -649,10 +661,12 @@ export function useAppController() {
       accountScreen: { accountMode, authError, setAccountMode, account, setAccount, authBusy, authLoading, submitAccount },
       profileScreen: { session, authError, profile, setProfile, authBusy, saveProfile, back, signOut },
       communityScreen: {
-        communitySearch, setCommunitySearch, communityGymFilter, setCommunityGymFilter,
+        communitySearch, setCommunitySearch, communityAudience, setCommunityAudience,
+        communityGymFilter, setCommunityGymFilter,
         catalogGyms, communityGradeFilter, setCommunityGradeFilter, catalogRoutes,
         communityResults, setCommunityVideoId, setExpandedCommunityDescription, go,
         communityVideos, publicHasMore, publicLoading, publicError, loadMorePublic, retryPublic,
+        session, following, toggleFollow,
       },
       communityVideoScreen: {
         communityVideos, communityVideoId, catalogRoutes, expandedCommunityDescription,
@@ -694,6 +708,7 @@ export function useAppController() {
         catalogRoutes, setSelectedRoute, setSelectedGym, setActiveAttemptId,
         setHasAttempt, setWorkspaceEntry, setWorkspaceSource, go,
         libraryItems, openRoute, savedVideos: savedLibraryVideos, openSavedSample,
+        setManageMode,
       },
     },
     shell: {

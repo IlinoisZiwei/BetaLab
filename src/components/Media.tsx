@@ -127,6 +127,16 @@ export function CommunityVideoPlayer({
 }) {
   const ref = useRef<HTMLVideoElement>(null)
   const [playing, setPlaying] = useState(false)
+  const [duration, setDuration] = useState(0)
+  const [currentTime, setCurrentTime] = useState(0)
+  const formatTime = (seconds: number) => {
+    const safeSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0
+    return `${Math.floor(safeSeconds / 60)}:${String(Math.floor(safeSeconds % 60)).padStart(2, "0")}`
+  }
+  useEffect(() => {
+    setCurrentTime(0)
+    setDuration(0)
+  }, [src])
   useEffect(() => {
     const video = ref.current
     if (!video) return
@@ -157,6 +167,10 @@ export function CommunityVideoPlayer({
         playsInline
         loop
         preload="metadata"
+        onLoadedMetadata={(event) => setDuration(event.currentTarget.duration || 0)}
+        onDurationChange={(event) => setDuration(event.currentTarget.duration || 0)}
+        onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
+        onSeeked={(event) => setCurrentTime(event.currentTarget.currentTime)}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onClick={(event) => {
@@ -177,6 +191,30 @@ export function CommunityVideoPlayer({
           </svg>
         </button>
       )}
+      <div
+        className="community-video-scrubber"
+        onClick={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <input
+          type="range"
+          min="0"
+          max={duration || 0}
+          step="0.01"
+          value={Math.min(currentTime, duration || 0)}
+          aria-label="Video timeline"
+          aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
+          disabled={!duration}
+          onChange={(event) => {
+            const nextTime = Number(event.currentTarget.value)
+            if (ref.current) ref.current.currentTime = nextTime
+            setCurrentTime(nextTime)
+          }}
+        />
+        <span aria-hidden="true">
+          {formatTime(currentTime)} / {formatTime(duration)}
+        </span>
+      </div>
     </div>
   )
 }

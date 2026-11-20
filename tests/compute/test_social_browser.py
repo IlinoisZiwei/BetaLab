@@ -1,15 +1,17 @@
 """N3.2 / N3.3 (B side) in a real browser: Community social features end to end.
 
 Starts its own API (8798) and Vite (5178) on a disposable schema, uploads one
-public Beta video as alice, then checks as bob on a touch phone:
+public Beta video as alice, then checks touch-phone and desktop flows:
 
 - touch gestures: vertical swipe changes video; right swipe opens the author
   page; left swipe goes back; swipes never trigger the browser's own history
   navigation; a swipe inside the comment sheet does nothing;
 - bundled samples take likes, saves and comments, and live comments are labelled in English;
 - failure states: comments and the author page show Try again, a failed post
-  keeps the draft, and a failed like rolls back;
-- account switching on one device never shows the previous account's state.
+  keeps the draft, a failed like rolls back, and My Page statistics retry;
+- account switching on one device never shows the previous account's state;
+- desktop right/left drags open and close the author page, Calendar month drags
+  stay inside the Calendar, and My Page renders persistent social statistics.
 
 Opt in with BETALAB_TEST_DB=1 BETALAB_SOCIAL_BROWSER=1 (Playwright required;
 BETALAB_CHROME may point at a Chrome binary).
@@ -100,7 +102,8 @@ class SocialBrowserTest(unittest.TestCase):
     def sign_out(self, page):
         page.goto(BASE)
         page.wait_for_selector('text=Go Climbing')
-        page.get_by_role('button', name='Profile and account').click()
+        page.get_by_role('button', name=re.compile('^My Page')).click()
+        page.get_by_role('button', name='Edit profile').click()
         page.get_by_role('button', name='Sign out').click()
         page.get_by_label('Username', exact=True).wait_for()
 
@@ -130,7 +133,7 @@ class SocialBrowserTest(unittest.TestCase):
 
     # -------------------------------------------------------------------- test
 
-    def test_phone_gestures_samples_failures_and_account_switch(self):
+    def test_phone_and_desktop_gestures_failures_and_account_switch(self):
         from playwright.sync_api import expect, sync_playwright
         errors = []
         with sync_playwright() as p:
@@ -143,8 +146,24 @@ class SocialBrowserTest(unittest.TestCase):
             cdp = phone.new_cdp_session(page)
             self.login(page, 'phase2bob')
 
+            # The list exposes Follow beside the author and a real server-filtered Following feed.
+            self.nav(page, 'Community')
+            entry = page.locator('.community-feed-entry', has_text='Alice corner send')
+            entry.get_by_role('button', name='Follow phase2alice').click()
+            expect(entry.get_by_role('button', name='Unfollow phase2alice')).to_be_visible()
+            audience = page.locator('.community-audience-tabs')
+            audience.get_by_role('button', name='Following', exact=True).click()
+            expect(page.locator('.community-feed-card', has_text='Alice corner send')).to_have_count(1)
+            expect(page.locator('.community-feed-badge.is-preset')).to_have_count(0)
+            page.locator('.community-feed-entry', has_text='Alice corner send').get_by_role(
+                'button', name='Unfollow phase2alice').click()
+            expect(page.get_by_text('No videos from people you follow yet')).to_be_visible()
+            audience.get_by_role('button', name='All', exact=True).click()
+
             # Touch gestures (N3.2)
             slide = self.open_video(page, 'Alice corner send', self.video_id)
+            expect(slide.get_by_role('slider', name='Video timeline')).to_be_visible()
+            expect(slide.get_by_role('slider', name='Video timeline')).to_be_enabled()
             scroller = page.locator('.community-tiktok-scroll')
             before = scroller.evaluate('e => e.scrollTop')
             self.swipe(page, cdp, 200, 600, 205, 200)
@@ -221,7 +240,17 @@ class SocialBrowserTest(unittest.TestCase):
             expect(slide.get_by_role('button', name=re.compile(r'^Like video \(1 likes\)$'))).to_be_visible()
             page.goto(BASE)
             page.wait_for_selector('text=Go Climbing')
-            self.nav(page, 'My Library')
+            page.route('**/api/me/social-stats', lambda route: route.abort())
+            page.get_by_role('button', name=re.compile('^My Page')).click()
+            stats_error = page.locator('.my-page-stats-error')
+            expect(stats_error).to_contain_text('Cannot connect')
+            page.unroute('**/api/me/social-stats')
+            stats_error.get_by_role('button', name='Try again').click()
+            stats = page.get_by_label('Social statistics')
+            expect(stats.locator('div', has_text='Likes received').locator('strong')).to_have_text('1')
+            expect(stats.locator('div', has_text='Saves received').locator('strong')).to_have_text('1')
+            expect(stats.locator('div', has_text='Followers').locator('strong')).to_have_text('1')
+            expect(stats.locator('div', has_text='Following').locator('strong')).to_have_text('0')
             page.get_by_role('button', name='Saved Beta').click()
             expect(page.get_by_text("Nora P.'s beta")).to_have_count(0)
             self.sign_out(page)
@@ -229,6 +258,44 @@ class SocialBrowserTest(unittest.TestCase):
             slide = self.open_video(page, 'Alice corner send', self.video_id)
             expect(slide.get_by_role('button', name=re.compile('^Like video'))).to_have_attribute('aria-pressed', 'true')
             expect(slide.locator('.follow-button')).to_have_attribute('aria-pressed', 'true')
+
+            # Desktop pointer gestures and the Calendar's isolated month drag (N3.2).
+            desktop = browser.new_context(viewport={'width': 1280, 'height': 900})
+            desktop_page = desktop.new_page()
+            desktop_page.on('pageerror', lambda error: errors.append(str(error)))
+            self.login(desktop_page, 'phase2bob')
+            desktop_slide = self.open_video(desktop_page, 'Alice corner send', self.video_id)
+            box = desktop_slide.bounding_box()
+            desktop_page.mouse.move(box['x'] + 70, box['y'] + box['height'] / 2)
+            desktop_page.mouse.down()
+            desktop_page.mouse.move(box['x'] + 270, box['y'] + box['height'] / 2, steps=8)
+            desktop_page.mouse.up()
+            expect(desktop_page.locator('.author-page').get_by_role('heading', name='phase2alice')).to_be_visible()
+            author = desktop_page.locator('.author-page').bounding_box()
+            desktop_page.mouse.move(author['x'] + author['width'] - 50, author['y'] + author['height'] / 2)
+            desktop_page.mouse.down()
+            desktop_page.mouse.move(author['x'] + 60, author['y'] + author['height'] / 2, steps=8)
+            desktop_page.mouse.up()
+            expect(desktop_page.locator(f'#community-video-{self.video_id}')).to_be_visible()
+
+            desktop_page.goto(BASE)
+            desktop_page.wait_for_selector('text=Go Climbing')
+            desktop_page.get_by_role('button', name=re.compile('^My Page')).click()
+            desktop_page.get_by_role('button', name='My Calendar').click()
+            month_heading = desktop_page.locator('.calendar-month-navigation h3')
+            before_month = month_heading.inner_text()
+            calendar = desktop_page.get_by_label('Monthly activity').bounding_box()
+            next_month = desktop_page.get_by_role('button', name='Next month')
+            go_forward = not next_month.is_disabled()
+            start_x = calendar['x'] + (calendar['width'] * (.8 if go_forward else .2))
+            end_x = calendar['x'] + (calendar['width'] * (.2 if go_forward else .8))
+            y = calendar['y'] + calendar['height'] / 2
+            desktop_page.mouse.move(start_x, y)
+            desktop_page.mouse.down()
+            desktop_page.mouse.move(end_x, y, steps=8)
+            desktop_page.mouse.up()
+            expect(month_heading).not_to_have_text(before_month)
+            desktop.close()
             browser.close()
         self.assertEqual(errors, [])
 

@@ -1,5 +1,10 @@
 export class ApiError extends Error {
-  constructor(public status: number, message: string) { super(message) }
+  public status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+  }
 }
 
 export async function api<T>(path: string, options: {method?: string; body?: unknown; csrf?: string; headers?: Record<string, string>; signal?: AbortSignal} = {}): Promise<T> {
