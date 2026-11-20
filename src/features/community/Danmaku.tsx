@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { isUserVideoId, onDanmakuPosted, socialApi, type DanmakuItem } from "./social"
+import { isSocialVideoId, onDanmakuPosted, socialApi, type DanmakuItem } from "./social"
 
 type Bullet = { key: string; text: string; lane: number; mine: boolean; travel: number }
 
@@ -37,7 +37,7 @@ export function Danmaku({ videoId, enabled }: { videoId: string; enabled: boolea
   useEffect(() => {
     setBullets([])
     items.current = []
-    if (!isUserVideoId(videoId)) return
+    if (!isSocialVideoId(videoId)) return
     const video = host.current?.closest(".community-tiktok-slide")?.querySelector("video")
     if (!video) return
     let loaded = false

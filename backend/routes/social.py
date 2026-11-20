@@ -2,9 +2,11 @@
 shares, video likes, saved Beta, want-to-try routes and follows.
 
 Every rule follows the video's own access rule (videos.video_for_access): the
-owner, or any signed-in user while the video is public. Anything a user may
-not see is reported as 404, so private videos never leak through these
-endpoints. Contract: README section "Social interactions".
+owner, or any signed-in user while the video is public. Bundled sample and
+preset Beta videos (table sample_videos, ids such as "sample-a1") are public
+demo content and accept the same interactions. Anything a user may not see is
+reported as 404, so private videos never leak through these endpoints.
+Contract: README section "Social interactions".
 """
 from uuid import UUID, uuid4
 
@@ -26,13 +28,29 @@ def parse_uuid(value, message='Not found'):
         raise HTTPException(404, message)
 
 
+def sample_video(video_id):
+    with database() as db:
+        return db.execute('SELECT id, title, duration_seconds FROM sample_videos WHERE id = %s',
+                          (video_id,)).fetchone()
+
+
 def video_for_access(video_id, user):
+    """The video row (uploaded or sample) the user may see; otherwise 404."""
+    sample = sample_video(video_id)
+    if sample:
+        return {**sample, 'is_sample': True}
     parse_uuid(video_id, 'Video not found')
     return _video_for_access(video_id, user)
 
+
 COMMENT_MAX = 500
-# Readable by: the owner, or anyone while public.
-ACCESSIBLE = "(v.owner_id = %(user)s OR v.visibility = 'public')"
+
+
+def accessible_key(column):
+    """SQL condition: the social key in `column` is a sample, or an uploaded video the user may read."""
+    return (f"(EXISTS (SELECT 1 FROM sample_videos sv WHERE sv.id = {column}) OR EXISTS ("
+            f"SELECT 1 FROM user_videos v WHERE v.id = social_video_uuid({column}) "
+            "AND (v.owner_id = %(user)s OR v.visibility = 'public')))")
 
 
 def page_args(limit: int, offset: int):
@@ -73,8 +91,8 @@ def comment_dict(row, user_id):
 def accessible_comment(db, comment_id, user):
     """The comment row if its video is visible to the user; otherwise 404."""
     parse_uuid(comment_id, 'Comment not found')
-    row = db.execute(f'SELECT c.* FROM video_comments c JOIN user_videos v ON v.id = c.video_id '
-                     f'WHERE c.id = %(id)s AND {ACCESSIBLE}', {'id': comment_id, 'user': user['id']}).fetchone()
+    row = db.execute(f'SELECT c.* FROM video_comments c WHERE c.id = %(id)s AND {accessible_key("c.video_id")}',
+                     {'id': comment_id, 'user': user['id']}).fetchone()
     if not row:
         raise HTTPException(404, 'Comment not found')
     return row
@@ -95,7 +113,7 @@ class CommentCreate(BaseModel):
 def list_comments(video_id: str, limit: int = 20, offset: int = 0, session=Depends(current_session)):
     """Top-level comments, oldest first. `total` counts top-level comments; `total_with_replies` everything."""
     page_args(limit, offset)
-    video_for_access(video_id, session)
+    video_id = str(video_for_access(video_id, session)['id'])  # canonical key
     with database() as db:
         rows = db.execute(COMMENT_SELECT + 'WHERE c.video_id = %(video)s AND c.parent_id IS NULL '
                           'ORDER BY c.created_at, c.id LIMIT %(limit)s OFFSET %(offset)s',
@@ -126,6 +144,7 @@ def create_comment(video_id: str, body: CommentCreate, session=Depends(current_s
     if not 1 <= len(text) <= COMMENT_MAX:
         raise HTTPException(422, f'Comments must be 1–{COMMENT_MAX} characters')
     video = video_for_access(video_id, session)
+    video_id = str(video['id'])
     parent_id, reply_to, time_s = None, None, body.time_s
     with database() as db:
         if body.parent_id:
@@ -180,7 +199,7 @@ def unlike_comment(comment_id: str, session=Depends(current_session)):
 @router.get('/api/videos/{video_id}/danmaku')
 def danmaku(video_id: str, session=Depends(current_session)):
     """Timestamped top-level comments for the overlay, in playback order (at most 500)."""
-    video_for_access(video_id, session)
+    video_id = str(video_for_access(video_id, session)['id'])  # canonical key
     with database() as db:
         rows = db.execute('SELECT c.id, c.body, c.time_s, c.author_id, u.display_name FROM video_comments c '
                           'JOIN users u ON u.id = c.author_id WHERE c.video_id = %s AND c.time_s IS NOT NULL '
@@ -192,7 +211,7 @@ def danmaku(video_id: str, session=Depends(current_session)):
 @router.post('/api/videos/{video_id}/share')
 def share_video(video_id: str, session=Depends(current_session)):
     """Records that the caller shared the video; counts people, so repeats do not inflate it."""
-    video_for_access(video_id, session)
+    video_id = str(video_for_access(video_id, session)['id'])  # canonical key
     with database() as db:
         db.execute('INSERT INTO video_shares(user_id, video_id) VALUES (%s, %s) ON CONFLICT DO NOTHING',
                    (session['id'], video_id))
@@ -208,7 +227,7 @@ def _like_count(db, video_id):
 
 @router.put('/api/videos/{video_id}/like')
 def like_video(video_id: str, session=Depends(current_session)):
-    video_for_access(video_id, session)
+    video_id = str(video_for_access(video_id, session)['id'])  # canonical key
     with database() as db:
         db.execute('INSERT INTO video_likes(user_id, video_id) VALUES (%s, %s) ON CONFLICT DO NOTHING',
                    (session['id'], video_id))
@@ -217,7 +236,7 @@ def like_video(video_id: str, session=Depends(current_session)):
 
 @router.delete('/api/videos/{video_id}/like')
 def unlike_video(video_id: str, session=Depends(current_session)):
-    video_for_access(video_id, session)
+    video_id = str(video_for_access(video_id, session)['id'])  # canonical key
     with database() as db:
         db.execute('DELETE FROM video_likes WHERE user_id = %s AND video_id = %s', (session['id'], video_id))
         return {'liked': False, 'like_count': _like_count(db, video_id)}
@@ -225,7 +244,7 @@ def unlike_video(video_id: str, session=Depends(current_session)):
 
 @router.put('/api/videos/{video_id}/save')
 def save_video(video_id: str, session=Depends(current_session)):
-    video_for_access(video_id, session)
+    video_id = str(video_for_access(video_id, session)['id'])  # canonical key
     with database() as db:
         db.execute('INSERT INTO saved_videos(user_id, video_id) VALUES (%s, %s) ON CONFLICT DO NOTHING',
                    (session['id'], video_id))
@@ -236,7 +255,10 @@ def save_video(video_id: str, session=Depends(current_session)):
 def unsave_video(video_id: str, session=Depends(current_session)):
     # Unsaving needs no access check: it only removes the caller's own row,
     # so a video that went private can still be cleared from "Saved".
-    parse_uuid(video_id, 'Video not found')
+    try:
+        video_id = str(UUID(video_id))
+    except ValueError:
+        pass  # sample ids are stored as given
     with database() as db:
         db.execute('DELETE FROM saved_videos WHERE user_id = %s AND video_id = %s', (session['id'], video_id))
     return {'saved': False}
@@ -244,21 +266,40 @@ def unsave_video(video_id: str, session=Depends(current_session)):
 
 @router.get('/api/me/saved-videos')
 def saved_videos(limit: int = 50, offset: int = 0, session=Depends(current_session)):
+    """Saved videos the caller can still see, newest first.
+
+    Uploaded videos come with their full video fields. Samples come as
+    {id, title, duration_seconds, is_preset_sample: true, saved_at}; the app
+    already holds their media and fills in the rest.
+    """
     page_args(limit, offset)
     with database() as db:
-        rows = db.execute(
-            'SELECT v.*, u.username, u.display_name, s.created_at AS saved_at, '
+        keys = db.execute(
+            f'SELECT s.video_id, s.created_at FROM saved_videos s WHERE s.user_id = %(user)s '
+            f'AND {accessible_key("s.video_id")} ORDER BY s.created_at DESC, s.video_id '
+            'LIMIT %(limit)s OFFSET %(offset)s',
+            {'user': session['id'], 'limit': limit, 'offset': offset}).fetchall()
+        ids = [k['video_id'] for k in keys]
+        uploads = {str(r['id']): r for r in db.execute(
+            'SELECT v.*, u.username, u.display_name, '
             'CASE WHEN v.share_as_beta THEN u.height_cm ELSE NULL END AS height_cm, '
             'CASE WHEN v.share_as_beta THEN u.arm_span_cm ELSE NULL END AS arm_span_cm '
-            'FROM saved_videos s JOIN user_videos v ON v.id = s.video_id JOIN users u ON u.id = v.owner_id '
-            f'WHERE s.user_id = %(user)s AND {ACCESSIBLE} '
-            'ORDER BY s.created_at DESC LIMIT %(limit)s OFFSET %(offset)s',
-            {'user': session['id'], 'limit': limit, 'offset': offset}).fetchall()
+            'FROM user_videos v JOIN users u ON u.id = v.owner_id '
+            'WHERE v.id = ANY(SELECT social_video_uuid(k) FROM unnest(%s::text[]) k)', (ids,)).fetchall()}
+        samples = {r['id']: r for r in db.execute(
+            'SELECT * FROM sample_videos WHERE id = ANY(%s)', (ids,)).fetchall()}
     items = []
-    for row in rows:
+    for key in keys:
+        saved_at = key['created_at'].isoformat()
+        if key['video_id'] in samples:
+            sample = samples[key['video_id']]
+            items.append({'id': sample['id'], 'title': sample['title'], 'duration_seconds': sample['duration_seconds'],
+                          'is_preset_sample': True, 'saved_at': saved_at})
+            continue
+        row = uploads[key['video_id']]
         item = video_dict(row)
         item.update(username=row['username'], display_name=row['display_name'], height_cm=row['height_cm'],
-                    arm_span_cm=row['arm_span_cm'], saved_at=row['saved_at'].isoformat())
+                    arm_span_cm=row['arm_span_cm'], saved_at=saved_at)
         items.append(item)
     return {'items': items, 'limit': limit, 'offset': offset}
 
@@ -267,30 +308,25 @@ def saved_videos(limit: int = 50, offset: int = 0, session=Depends(current_sessi
 def social_summary(ids: str = Query(..., max_length=4000), session=Depends(current_session)):
     """Counts and the caller's own state for up to 100 videos in one request.
 
-    IDs the caller may not see (or that are not UUIDs, e.g. preset samples) are
+    Samples are included. IDs the caller may not see, or that name nothing, are
     simply absent from the result, so lists can pass every visible card's id.
     """
-    wanted = []
-    for raw in dict.fromkeys(part.strip() for part in ids.split(',') if part.strip()):
-        try:
-            wanted.append(str(parse_uuid(raw)))
-        except HTTPException:
-            continue
+    wanted = list(dict.fromkeys(part.strip() for part in ids.split(',') if part.strip()))
     if len(wanted) > 100:
         raise HTTPException(422, 'At most 100 ids per request')
     if not wanted:
         return {'items': {}}
     with database() as db:
         rows = db.execute(
-            'SELECT v.id, '
-            '(SELECT count(*) FROM video_likes l WHERE l.video_id = v.id) AS like_count, '
-            '(SELECT count(*) FROM video_comments c WHERE c.video_id = v.id) AS comment_count, '
-            '(SELECT count(*) FROM video_shares sh WHERE sh.video_id = v.id) AS share_count, '
-            'EXISTS (SELECT 1 FROM video_likes l WHERE l.video_id = v.id AND l.user_id = %(user)s) AS liked, '
-            'EXISTS (SELECT 1 FROM saved_videos s WHERE s.video_id = v.id AND s.user_id = %(user)s) AS saved '
-            f'FROM user_videos v WHERE v.id = ANY(%(ids)s::uuid[]) AND {ACCESSIBLE}',
+            'SELECT k.id, '
+            '(SELECT count(*) FROM video_likes l WHERE l.video_id = k.id) AS like_count, '
+            '(SELECT count(*) FROM video_comments c WHERE c.video_id = k.id) AS comment_count, '
+            '(SELECT count(*) FROM video_shares sh WHERE sh.video_id = k.id) AS share_count, '
+            'EXISTS (SELECT 1 FROM video_likes l WHERE l.video_id = k.id AND l.user_id = %(user)s) AS liked, '
+            'EXISTS (SELECT 1 FROM saved_videos s WHERE s.video_id = k.id AND s.user_id = %(user)s) AS saved '
+            f'FROM unnest(%(ids)s::text[]) AS k(id) WHERE {accessible_key("k.id")}',
             {'user': session['id'], 'ids': wanted}).fetchall()
-    return {'items': {str(r['id']): {'like_count': r['like_count'], 'comment_count': r['comment_count'],
+    return {'items': {r['id']: {'like_count': r['like_count'], 'comment_count': r['comment_count'],
                                      'share_count': r['share_count'], 'liked': r['liked'], 'saved': r['saved']}
                       for r in rows}}
 
@@ -373,3 +409,47 @@ def following(session=Depends(current_session)):
                           (session['id'],)).fetchall()
     return {'items': [{'id': str(r['id']), 'username': r['username'], 'display_name': r['display_name'],
                        'followed_at': r['created_at'].isoformat()} for r in rows]}
+
+
+# --------------------------------------------------------- author page (N2.8)
+
+@router.get('/api/users/{user_id}/profile')
+def public_profile(user_id: str, limit: int = 20, offset: int = 0, session=Depends(current_session)):
+    """What anyone signed in may see of an account: identity, follow counts and public videos.
+
+    Interim contract until A's account visibility (N2.5) lands: every account is
+    treated as public. Never includes private videos, saved items, Want to Try,
+    skeletons, notifications or body measurements outside Beta shares, even for
+    the owner, so the page always shows the public view.
+    """
+    page_args(limit, offset)
+    with database() as db:
+        _existing_user(db, user_id)
+        user = db.execute('SELECT id, username, display_name, created_at FROM users WHERE id = %s',
+                          (user_id,)).fetchone()
+        counts = db.execute(
+            'SELECT (SELECT count(*) FROM follows WHERE followee_id = %(u)s) AS followers, '
+            '(SELECT count(*) FROM follows WHERE follower_id = %(u)s) AS following, '
+            'EXISTS (SELECT 1 FROM follows WHERE followee_id = %(u)s AND follower_id = %(me)s) AS followed, '
+            "(SELECT count(*) FROM user_videos WHERE owner_id = %(u)s AND visibility = 'public') AS videos",
+            {'u': user_id, 'me': session['id']}).fetchone()
+        rows = db.execute(
+            'SELECT v.*, u.username, u.display_name, '
+            'CASE WHEN v.share_as_beta THEN u.height_cm ELSE NULL END AS height_cm, '
+            'CASE WHEN v.share_as_beta THEN u.arm_span_cm ELSE NULL END AS arm_span_cm '
+            "FROM user_videos v JOIN users u ON u.id = v.owner_id WHERE v.owner_id = %s AND v.visibility = 'public' "
+            'ORDER BY v.created_at DESC, v.id LIMIT %s OFFSET %s', (user_id, limit, offset)).fetchall()
+    videos = []
+    for row in rows:
+        item = video_dict(row)
+        item.update(username=row['username'], display_name=row['display_name'],
+                    height_cm=row['height_cm'], arm_span_cm=row['arm_span_cm'])
+        videos.append(item)
+    return {
+        'id': str(user['id']), 'username': user['username'], 'display_name': user['display_name'],
+        'joined_at': user['created_at'].isoformat(), 'account_visibility': 'public',
+        'is_me': user['id'] == session['id'],
+        'follower_count': counts['followers'], 'following_count': counts['following'],
+        'following': counts['followed'], 'public_video_count': counts['videos'],
+        'videos': videos, 'limit': limit, 'offset': offset,
+    }

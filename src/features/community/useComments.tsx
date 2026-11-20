@@ -1,5 +1,6 @@
 import type { Session } from "../../api"
 import { CommentSection } from "./CommentSection"
+import { socialVideoKey } from "./social"
 
 type Options = {
   session: Session | null
@@ -11,12 +12,12 @@ type Options = {
 
 /**
  * Persistent comments (B2.4). Pages keep calling renderComments(source) with
- * "attempt:<video id>" or "beta:<preset id>"; uploaded videos get real,
- * shared comments and bundled presets show a notice instead.
+ * "attempt:<video id>" or "beta:<preset id>". Uploads and bundled samples
+ * ("a1" → "sample-a1", "b1" → "preset-beta-b1") all get shared comments.
  */
 export function useComments({ session, onExpired, onCountChange }: Options) {
   const renderComments = (source: string) => {
-    const videoId = source.slice(source.indexOf(":") + 1)
+    const videoId = socialVideoKey(source.slice(source.indexOf(":") + 1))
     return <CommentSection key={videoId} videoId={videoId} session={session} onSignIn={onExpired} onCountChange={onCountChange} />
   }
   return { renderComments }

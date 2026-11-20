@@ -89,9 +89,9 @@ class SocialTest(unittest.TestCase):
         page2 = self.alice.get(f'/api/videos/{video}/comments?limit=2&offset=2').json()
         self.assertEqual([c['body'] for c in page2['items']], ['c2'])
         self.assertEqual(self.alice.get(f'/api/videos/{video}/comments?limit=0').status_code, 422)
-        # Bundled samples are not database videos: plain 404, never a database error.
-        self.assertEqual(self.alice.get('/api/videos/sample-a1/comments').status_code, 404)
-        self.assertEqual(self.alice.put('/api/videos/preset-beta-b1/like').status_code, 404)
+        # Unknown ids are a plain 404, never a database error.
+        self.assertEqual(self.alice.get('/api/videos/sample-zz/comments').status_code, 404)
+        self.assertEqual(self.alice.put('/api/videos/not-a-video/like').status_code, 404)
         self.assertEqual(self.alice.delete('/api/comments/not-a-uuid').status_code, 404)
 
     def test_login_and_csrf_required(self):
@@ -106,8 +106,15 @@ class SocialTest(unittest.TestCase):
     def test_deleting_video_removes_its_comments(self):
         video = self.make_video(self.alice_id)
         self.post(self.bob, video, body='bye')
+        self.bob.put(f'/api/videos/{video}/like')
+        self.bob.put(f'/api/videos/{video}/save')
         self.assertEqual(self.alice.delete(f'/api/videos/{video}').status_code, 204)
         self.assertEqual(self.alice.get(f'/api/videos/{video}/comments').status_code, 404)
+        from backend.database import database
+        with database() as db:
+            for table in ('video_comments', 'video_likes', 'saved_videos', 'video_shares'):
+                left = db.execute(f'SELECT count(*) AS n FROM {table} WHERE video_id = %s', (video,)).fetchone()['n']
+                self.assertEqual(left, 0, table)
 
     # ------------------------------------------------- replies and comment likes
 
@@ -214,9 +221,64 @@ class SocialTest(unittest.TestCase):
     def test_social_summary_hides_inaccessible_and_ignores_bad_ids(self):
         public, private = self.make_video(self.alice_id), self.make_video(self.alice_id, 'private')
         self.post(self.bob, public, body='hi')
-        items = self.bob.get(f'/api/social/videos?ids={public},{private},sample-a1,preset-beta-b1').json()['items']
-        self.assertEqual(set(items), {public})
+        items = self.bob.get(f'/api/social/videos?ids={public},{private},sample-a1,nope').json()['items']
+        self.assertEqual(set(items), {public, 'sample-a1'})
         self.assertEqual(items[public]['comment_count'], 1)
+
+    # -------------------------------------------------------- bundled samples
+
+    def test_sample_videos_accept_every_interaction(self):
+        sample = 'preset-beta-b1'
+        self.assertEqual(self.bob.put(f'/api/videos/{sample}/like').json()['liked'], True)
+        self.assertEqual(self.carol.put(f'/api/videos/{sample}/like').json()['like_count'], 2)
+        self.assertEqual(self.bob.put(f'/api/videos/{sample}/save').json(), {'saved': True})
+        root = self.post(self.bob, sample, body='Nice beta', time_s=999).json()
+        self.assertEqual(root['time_s'], 32)  # clamped to the sample's length
+        reply = self.post(self.carol, sample, body='agreed', parent_id=root['id'])
+        self.assertEqual(reply.status_code, 201, reply.text)
+        self.assertEqual(self.carol.put(f"/api/comments/{root['id']}/like").json()['like_count'], 1)
+        self.assertEqual([d['body'] for d in self.carol.get(f'/api/videos/{sample}/danmaku').json()['items']],
+                         ['Nice beta'])
+        self.assertEqual(self.carol.post(f'/api/videos/{sample}/share').json(), {'share_count': 1})
+        summary = self.bob.get(f'/api/social/videos?ids={sample}').json()['items'][sample]
+        self.assertEqual(summary, {'like_count': 2, 'comment_count': 2, 'share_count': 1,
+                                   'liked': True, 'saved': True})
+        saved = self.bob.get('/api/me/saved-videos').json()['items']
+        self.assertIn({'id': sample, 'title': "Nora P.'s beta", 'duration_seconds': 32.0,
+                       'is_preset_sample': True, 'saved_at': saved[0]['saved_at']}, saved)
+        self.assertEqual(self.bob.delete(f'/api/videos/{sample}/save').json(), {'saved': False})
+        self.assertNotIn(sample, {v['id'] for v in self.bob.get('/api/me/saved-videos').json()['items']})
+        self.assertEqual(self.bob.delete(f'/api/videos/{sample}/like').json(), {'liked': False, 'like_count': 1})
+        self.assertEqual(self.anonymous.get(f'/api/videos/{sample}/comments').status_code, 401)
+
+    def test_uppercase_uuid_reaches_the_same_video(self):
+        video = self.make_video(self.alice_id)
+        self.bob.put(f'/api/videos/{video.upper()}/like')
+        self.assertTrue(self.bob.get(f'/api/social/videos?ids={video}').json()['items'][video]['liked'])
+
+    # ------------------------------------------------------ author page (N2.8)
+
+    def test_author_profile_shows_only_public_content(self):
+        public = self.make_video(self.alice_id, share_as_beta=True)
+        private = self.make_video(self.alice_id, 'private')
+        self.bob.put(f'/api/users/{self.alice_id}/follow')
+        profile = self.bob.get(f'/api/users/{self.alice_id}/profile')
+        self.assertEqual(profile.status_code, 200, profile.text)
+        body = profile.json()
+        ids = [v['id'] for v in body['videos']]
+        self.assertIn(public, ids)
+        self.assertNotIn(private, ids)
+        self.assertTrue(body['following'])
+        self.assertFalse(body['is_me'])
+        self.assertGreaterEqual(body['follower_count'], 1)
+        for leaked in ('saved', 'wanted_routes', 'skeletons', 'notifications', 'height_cm', 'password_hash'):
+            self.assertNotIn(leaked, body)
+        own = self.alice.get(f'/api/users/{self.alice_id}/profile').json()
+        self.assertTrue(own['is_me'])
+        self.assertNotIn(private, [v['id'] for v in own['videos']])  # always the public view
+        self.assertEqual(self.bob.get(f'/api/users/{uuid4()}/profile').status_code, 404)
+        self.assertEqual(self.bob.get('/api/users/not-a-uuid/profile').status_code, 404)
+        self.assertEqual(self.anonymous.get(f'/api/users/{self.alice_id}/profile').status_code, 401)
 
     def test_wanted_routes_round_trip(self):
         self.assertEqual(self.bob.put('/api/routes/test-route/want').json(), {'wanted': True})
