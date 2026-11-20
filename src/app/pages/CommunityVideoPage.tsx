@@ -1,5 +1,8 @@
+import { useState } from "react"
 import { routes, CommunityVideoPlayer } from "../shared"
 import type { AppController } from "../useAppController"
+import { CommentSection } from "../../features/community/CommentSection"
+import { Danmaku } from "../../features/community/Danmaku"
 
 type Props = AppController["pages"]["communityVideoScreen"]
 
@@ -9,14 +12,21 @@ export function CommunityVideoPage({
   catalogRoutes,
   expandedCommunityDescription,
   back,
-  likedBeta,
-  toggle,
-  setLikedBeta,
-  savedBeta,
-  setSavedBeta,
+  social,
+  toggleSocial,
+  shareVideo,
+  danmakuOn,
+  toggleDanmaku,
+  session,
+  expireSession,
+  updateCommentCount,
   setComputeVideo,
   setExpandedCommunityDescription,
 }: Props) {
+  // B2.8: comments open in a bottom sheet over the playing video, TikTok-style.
+  const [commentsFor, setCommentsFor] = useState<string | null>(null)
+  const videoElement = (videoId: string) =>
+    document.getElementById(`community-video-${videoId}`)?.querySelector("video") ?? null
   return (
     <main className="community-tiktok">
       {communityVideos.length === 0 ? (
@@ -45,6 +55,7 @@ export function CommunityVideoPage({
                   alt={`${video.title} video`}
                 />
                 <div className="community-tiktok-shade" />
+                <Danmaku videoId={video.id} enabled={danmakuOn} />
                 <div className="community-tiktok-top">
                   <button type="button" onClick={back} aria-label="Back">
                     ‹
@@ -57,23 +68,55 @@ export function CommunityVideoPage({
                 >
                   <button
                     type="button"
-                    aria-label="Like video"
-                    aria-pressed={likedBeta.includes(video.id)}
-                    onClick={() => toggle(video.id, likedBeta, setLikedBeta)}
+                    aria-label={`Like video${social[video.id] ? ` (${social[video.id].like_count} likes)` : ""}`}
+                    aria-pressed={!!social[video.id]?.liked}
+                    onClick={() => void toggleSocial(video.id, "liked")}
                   >
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" />
                     </svg>
+                    {social[video.id] && <span className="action-count">{social[video.id].like_count}</span>}
                   </button>
                   <button
                     type="button"
                     aria-label="Save video"
-                    aria-pressed={savedBeta.includes(video.id)}
-                    onClick={() => toggle(video.id, savedBeta, setSavedBeta)}
+                    aria-pressed={!!social[video.id]?.saved}
+                    onClick={() => void toggleSocial(video.id, "saved")}
                   >
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z" />
                     </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="comments-action"
+                    aria-label={`Comments${social[video.id] ? ` (${social[video.id].comment_count})` : ""}`}
+                    onClick={() => setCommentsFor(video.id)}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M4 5h16v11H9l-5 4V5Z" />
+                    </svg>
+                    {social[video.id] && <span className="action-count">{social[video.id].comment_count}</span>}
+                  </button>
+                  <button
+                    type="button"
+                    className="share-action"
+                    aria-label={`Share video${social[video.id] ? ` (${social[video.id].share_count} shares)` : ""}`}
+                    onClick={() => void shareVideo(video)}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M14 5l7 7-7 7v-4c-5 0-8 1.5-10 5 .5-5.5 3.5-10 10-11V5Z" />
+                    </svg>
+                    {social[video.id] && <span className="action-count">{social[video.id].share_count}</span>}
+                  </button>
+                  <button
+                    type="button"
+                    className={`danmaku-action${danmakuOn ? " is-on" : ""}`}
+                    aria-label="Show danmaku"
+                    aria-pressed={danmakuOn}
+                    onClick={toggleDanmaku}
+                  >
+                    <span aria-hidden="true">弹</span>
                   </button>
                   <button
                     type="button"
@@ -131,6 +174,37 @@ export function CommunityVideoPage({
               </section>
             )
           })}
+        </div>
+      )}
+      {commentsFor && (
+        <div className="comment-sheet-backdrop" onClick={() => setCommentsFor(null)}>
+          <div
+            className="comment-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Comments"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="comment-sheet-header">
+              <span aria-hidden="true" />
+              <button type="button" aria-label="Close comments" onClick={() => setCommentsFor(null)}>×</button>
+            </div>
+            <CommentSection
+              videoId={commentsFor}
+              session={session}
+              onSignIn={expireSession}
+              onCountChange={updateCommentCount}
+              getCurrentTime={() => videoElement(commentsFor)?.currentTime}
+              onSeek={(seconds) => {
+                const element = videoElement(commentsFor)
+                if (element) {
+                  element.currentTime = seconds
+                  void element.play().catch(() => {})
+                }
+                setCommentsFor(null)
+              }}
+            />
+          </div>
         </div>
       )}
     </main>

@@ -1,5 +1,6 @@
 import { useCatalog } from "../features/catalog/useCatalog"
 import { useComments } from "../features/community/useComments"
+import { useSocial } from "../features/community/useSocial"
 import { useUpload } from "../features/videos/useUpload"
 import { useVideoLibrary } from "../features/videos/useVideoLibrary"
 import { useNavigation } from "./hooks/useNavigation"
@@ -33,8 +34,6 @@ export function useAppController() {
   const [communityGradeFilter, setCommunityGradeFilter] = useState("All grades")
   const [selectedGym, setSelectedGym] = useState("Movement Fishtown")
   const [selectedRoute, setSelectedRoute] = useState(routes[0])
-  const [savedBeta, setSavedBeta] = useState<string[]>([])
-  const [wantedRoutes, setWantedRoutes] = useState<string[]>([])
   const [sampleAttempts, setAttemptRecords] = useState<AttemptRecord[]>([
     {
       id: "a1",
@@ -71,7 +70,6 @@ export function useAppController() {
     useState<WorkspaceEntry>("attempt")
   const [workspaceBetaId, setWorkspaceBetaId] = useState("b1")
   const [betaOrigin, setBetaOrigin] = useState<BetaOrigin>("workspace")
-  const [likedBeta, setLikedBeta] = useState<string[]>([])
   const [hasAttempt, setHasAttempt] = useState(true)
   const [cueTime, setCueTime] = useState(7)
   const jumpToCueTime = (time: number) => {
@@ -136,14 +134,7 @@ export function useAppController() {
         records.filter((record) => /^a[0-9]+$/.test(record.id)),
       )
       setJobs({})
-      setSavedBeta([])
-      setLikedBeta([])
-      setWantedRoutes([])
-      setComments([])
-      setCommentDrafts({})
-      setReplyDrafts({})
-      setReplyTargets({})
-      setExpandedReplies([])
+      resetSocial()
       setManageMode(null)
       setHasAttempt(false)
       setActiveAttemptId("")
@@ -222,25 +213,56 @@ export function useAppController() {
     },
   })
   const {
-    renderComments,
-    setComments,
-    setCommentDrafts,
-    setReplyDrafts,
-    setReplyTargets,
-    setExpandedReplies,
-  } = useComments({ signedIn, profile, go, setAccountMode })
-  const {
     myVideos,
     publicVideos,
     routeBetaVideos,
     syncVideo,
     removeVideo,
     resetVideos,
+    publicHasMore,
+    publicLoading,
+    publicError,
+    loadMorePublic,
+    retryPublic,
+    refreshPublic,
   } = useVideoLibrary({
     session,
     screen,
     routeId: selectedRoute.id,
     onError: setCatalogError,
+  })
+  const expireSession = () => {
+    applySession(null)
+    setAuthError("Your session expired. Please sign in again.")
+  }
+  const {
+    social,
+    savedVideos,
+    wantedRoutes,
+    danmakuOn,
+    toggleSocial,
+    toggleWanted,
+    updateCommentCount,
+    shareVideo,
+    toggleDanmaku,
+    forgetVideo,
+    reset: resetSocial,
+  } = useSocial({
+    session,
+    authEpoch,
+    flash,
+    onExpired: expireSession,
+    visibleVideos: [...myVideos, ...publicVideos, ...routeBetaVideos],
+    onOpenShared: (id, video) => {
+      setCommunityVideoId(id)
+      go("communityVideo")
+      void refreshPublic(video ?? undefined)
+    },
+  })
+  const { renderComments } = useComments({
+    session,
+    onExpired: expireSession,
+    onCountChange: updateCommentCount,
   })
   const attempts = [...new Set(myVideos.map((video) => video.route_id))]
   const attemptRecords: AttemptRecord[] = [
@@ -257,7 +279,7 @@ export function useAppController() {
       (record) => !myVideos.some((video) => video.id === record.id),
     ),
   ]
-  const activeVideo = [...myVideos, ...publicVideos, ...routeBetaVideos].find(
+  const activeVideo = [...myVideos, ...publicVideos, ...routeBetaVideos, ...savedVideos].find(
     (video) => video.id === activeAttemptId,
   )
   const activeAttempt = activeVideo
@@ -317,17 +339,6 @@ export function useAppController() {
     go("workspace")
   }
 
-  const toggle = (
-    id: string,
-    values: string[],
-    update: (next: string[]) => void,
-  ) => {
-    update(
-      values.includes(id)
-        ? values.filter((value) => value !== id)
-        : [...values, id],
-    )
-  }
 
   const pageTitle: Record<Screen, string> = {
     home: "BetaLab",
@@ -523,9 +534,7 @@ export function useAppController() {
       if (epoch !== authEpoch.current) return
       removeVideo(id)
       setAttemptRecords((items) => items.filter((v) => v.id !== id))
-      setSavedBeta((items) => items.filter((v) => v !== id))
-      setLikedBeta((items) => items.filter((v) => v !== id))
-      setComments((items) => items.filter((v) => v.source !== `attempt:${id}`))
+      forgetVideo(id)
       setJobs((items) => {
         const next = { ...items }
         delete next[id]
@@ -544,7 +553,8 @@ export function useAppController() {
   }
   const showOthersBeta =
     betaVisible || activeVideo?.owner_id !== session?.user.id || !hasAttempt
-  const communityBetaVideo = routeBetaVideos.find(
+  // Another climber's uploaded video, opened from the route list, Community or Saved.
+  const communityBetaVideo = [...routeBetaVideos, ...savedVideos, ...publicVideos].find(
     (video) => video.id === activeAttemptId,
   )
   const isOwnUploadedVideo = myVideos.some(
@@ -564,11 +574,13 @@ export function useAppController() {
         routeId: video.route_id,
       }))
     if (libraryTab === "saved")
-      return savedBeta.map((id) => ({
-        id,
-        label: betaCards.find((card) => card.id === id)?.route ?? id,
-        meta: "Saved community beta",
-        target: "workspace" as const,
+      return savedVideos.map((video) => ({
+        id: video.id,
+        label: video.title,
+        meta: `Saved · ${video.display_name || video.username || "Community member"}`,
+        target: "saved" as const,
+        routeId: video.route_id,
+        contentUrl: video.content_url,
       }))
     return wantedRoutes.map((id) => ({
       id,
@@ -581,7 +593,7 @@ export function useAppController() {
     attemptRecords,
     jobs,
     libraryTab,
-    savedBeta,
+    savedVideos,
     wantedRoutes,
     myVideos,
   ])
@@ -595,15 +607,15 @@ export function useAppController() {
         communitySearch, setCommunitySearch, communityGymFilter, setCommunityGymFilter,
         catalogGyms, communityGradeFilter, setCommunityGradeFilter, catalogRoutes,
         communityResults, setCommunityVideoId, setExpandedCommunityDescription, go,
-        communityVideos,
+        communityVideos, publicHasMore, publicLoading, publicError, loadMorePublic, retryPublic,
       },
       communityVideoScreen: {
         communityVideos, communityVideoId, catalogRoutes, expandedCommunityDescription,
-        back, likedBeta, toggle, setLikedBeta,
-        savedBeta, setSavedBeta, setComputeVideo, setExpandedCommunityDescription,
+        back, social, toggleSocial, shareVideo, danmakuOn, toggleDanmaku,
+        session, expireSession, updateCommentCount, setComputeVideo, setExpandedCommunityDescription,
       },
       gymsScreen: { search, setSearch, gymResults, setSelectedGym, go },
-      galleryScreen: { selectedGym, catalogRoutes, gradeFilter, setGradeFilter, wantedRoutes, openRoute, catalog, toggle, setWantedRoutes },
+      galleryScreen: { selectedGym, catalogRoutes, gradeFilter, setGradeFilter, wantedRoutes, openRoute, catalog, toggleWanted },
       routeScreen: { selectedGym, selectedRoute, openWorkspace, routeAttempts },
       workspaceScreen: {
         selectedGym, selectedRoute, hasAttempt, isOwnUploadedVideo,
@@ -624,16 +636,14 @@ export function useAppController() {
         renderComments,
       },
       betaDetailScreen: {
-        selectedBeta, betaOrigin, likedBeta, workspaceBetaId,
-        toggle, setLikedBeta, savedBeta, setSavedBeta,
+        selectedBeta, betaOrigin, social, workspaceBetaId, toggleSocial,
         selectedGym, selectedRoute, setComputeVideo, renderComments,
       },
       libraryScreen: {
         libraryTab, setLibraryTab, catalogGyms, myVideos,
         catalogRoutes, setSelectedRoute, setSelectedGym, setActiveAttemptId,
         setHasAttempt, setWorkspaceEntry, setWorkspaceSource, go,
-        libraryItems, openRoute, setWorkspaceBetaId, setBetaOrigin,
-        openWorkspace,
+        libraryItems, openRoute, savedVideos,
       },
     },
     shell: {
