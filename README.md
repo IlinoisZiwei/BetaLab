@@ -34,7 +34,7 @@ The [GitHub Pages site](https://ilinoisziwei.github.io/BetaLab/) is a static fro
 
 | Area | Available locally | Remaining work |
 | --- | --- | --- |
-| Accounts and videos | Authentication, profile, route-linked upload, playback, visibility and deletion | Deployment hardening, backup/restore and broader device testing |
+| Accounts and videos | Authentication, profile, route-linked upload, playback, visibility and deletion; verified backup/restore of database, uploads and compute storage | Deployment hardening and broader device testing |
 | Catalog | Movement Fishtown and 73 highlighted route-photo entries, plus r1 | Review uncertain photo annotations; additional catalog data |
 | Tasks and notifications | Persistent queue, one worker, retries, notifications, protected artifacts | Broader operational/performance testing |
 | Upload analysis | Automatic submission, submission recovery, failure/retry and refresh recovery | More real-video failure cases and clearer corrective guidance |
@@ -42,7 +42,7 @@ The [GitHub Pages site](https://ilinoisziwei.github.io/BetaLab/) is a static fro
 | New-video inputs | Extraction, contact versions, local calibration; measured-input panel assembly/camera alignment and unified export | Real handheld calibration data, automatic moving-camera recovery, body depth/source reconstruction and adaptation |
 | Trial2 geometry | v5 source and target diagnostic previews | Baselines still fail; source-motion investigation is currently paused |
 | Result presentation | Separate examples, diagnostics and gated technique results | Full-model checks and real technique comparison are not implemented in the current flow |
-| Social interactions | Prototype UI interactions | Persistent likes, saves, comments/replies and cross-device synchronization remain incomplete |
+| Social interactions | Persistent comments with one level of replies, comment likes, timestamped danmaku, video likes/saves/shares, want-to-try routes and follow; Community feed paging; share links | Author page and right-swipe entry (N2.8), private-account follow rules (N1.2); bundled samples stay read-only examples |
 
 Task completion means computation and storage finished. It does not mean the climbing movement passed geometric or physical validation.
 
@@ -190,6 +190,9 @@ Browser requests use same-origin `/api`, session cookies and `X-CSRF-Token` on a
 | Global geometry | `GET` / `POST /tasks/{id}/world-review`; owner-only, optional GET version |
 | Global computation input | `GET /tasks/{id}/world-review/export?version=...`; pinned version, unresolved states retained |
 | Notifications | `GET /notifications`; `PATCH /notifications/{id}/read` |
+| Comments | `GET` / `POST /videos/{id}/comments` (top level, paged; `total_with_replies`); `GET /comments/{id}/replies`; `DELETE /comments/{id}` (author only); `PUT` / `DELETE /comments/{id}/like` |
+| Video reactions | `PUT` / `DELETE /videos/{id}/like` and `/videos/{id}/save`; `POST /videos/{id}/share`; `GET /videos/{id}/danmaku`; `GET /social/videos?ids=` (counts and own state for up to 100 ids); `GET /me/saved-videos` |
+| Routes and people | `GET /me/wanted-routes`; `PUT` / `DELETE /routes/{id}/want`; `PUT` / `DELETE` / `GET /users/{id}/follow`; `GET /me/following` |
 
 All routes above have the `/api` prefix. Interactive OpenAPI describes exact payloads. Compute [schemas and fixtures](docs/compute/examples/) remain machine-readable examples; authoritative models are `contracts.py` and `input_schema.py`. Exporting examples uses `python -m backend.compute.export_examples` in the API environment.
 
@@ -258,7 +261,19 @@ Movement Fishtown retains gym ID `gym-a`. Its photo import adds 73 entries from 
 - Highlighted photos are visual edits, not exact segmentation masks or calibrated algorithm inputs. Unspecified grades are Unrated; white routes in IMG_7536 and small teal holds in IMG_7539 need review.
 - `scripts/import-route-photos.py` prepares assets from the separate full-quality delivery folder; it is not a startup step. Gym B has no supplied route footage.
 
-Private uploads use `UPLOAD_DIR`; task work, published artifacts and immutable reviews use `COMPUTE_STORAGE_DIR`. Local test reports and standby packages live under ignored `backend/compute/runs/`. They are machine-local evidence, not files guaranteed to exist in a fresh clone. Database records, upload files and compute storage need separate backup coverage.
+Private uploads use `UPLOAD_DIR`; task work, published artifacts and immutable reviews use `COMPUTE_STORAGE_DIR`. Local test reports and standby packages live under ignored `backend/compute/runs/`. They are machine-local evidence, not files guaranteed to exist in a fresh clone. Database records, upload files and compute storage are backed up together; see Backup and restore below.
+
+### Backup and restore
+
+Back up all three together, or upload and artifact records stop matching their files. From the repository root, with the API environment (Docker by default; add `--direct` for host PostgreSQL tools, as with `manage`):
+
+```sh
+python3 -m backend.db.backup backup                  # writes backups/<UTC time>/
+python3 -m backend.db.backup verify backups/<folder>  # restore into a scratch database and compare
+python3 -m backend.db.backup restore backups/<folder> --yes
+```
+
+A backup holds `db.dump`, `uploads.tar.gz`, `compute.tar.gz` and `manifest.json` (row count per table, every upload and published artifact key the database references, SHA-256 of each file). **Run `verify` after every backup**: it restores into `<POSTGRES_DB>_restore_check`, compares every table's row count and checks each referenced file is archived, then drops the scratch database; a damaged file or a missing video/artifact fails with a non-zero exit. `restore` needs `--yes`; stop the API and worker first. It moves the current upload and compute folders to `<folder>.before-restore-<time>` instead of deleting them. `backups/` is git-ignored: it contains user data and password hashes, so keep copies off the repository and on another disk or machine.
 
 <a id="results"></a>
 ## 9. Results and known limitations
