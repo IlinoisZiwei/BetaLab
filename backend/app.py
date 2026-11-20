@@ -5,7 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from .database import database
 from .auth import current_session
-from .routes import accounts, catalog, videos
+from .routes import accounts, catalog, social, videos
 from .compute.api import create_router
 
 app = FastAPI(title='BetaLab API', version='0.1.0')
@@ -43,4 +43,5 @@ def health():
 app.include_router(accounts.router)
 app.include_router(catalog.router)
 app.include_router(videos.router)
+app.include_router(social.router)
 app.include_router(create_router(current_session))

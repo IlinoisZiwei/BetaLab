@@ -1,6 +1,6 @@
 import type { UserVideo } from "../api"
 
-export type Screen = "home" | "account" | "profile" | "community" | "communityVideo" | "gyms" | "gallery" | "route" | "workspace" | "beta" | "library"
+export type Screen = "home" | "account" | "profile" | "community" | "communityVideo" | "gyms" | "gallery" | "route" | "workspace" | "beta" | "library" | "author"
 
 export type LibraryTab = "attempts" | "saved" | "wanted" | "skeletons"
 

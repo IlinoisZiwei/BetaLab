@@ -17,6 +17,11 @@ export function CommunityPage({
   setExpandedCommunityDescription,
   go,
   communityVideos,
+  publicHasMore,
+  publicLoading,
+  publicError,
+  loadMorePublic,
+  retryPublic,
 }: Props) {
   return (
     <main className="screen with-header community-feed">
@@ -112,7 +117,21 @@ export function CommunityPage({
             </button>
           )
         })}
-        {communityResults.length === 0 && (
+        {publicLoading && communityResults.length === 0 && (
+          <p className="community-feed-status" role="status">Loading community videos…</p>
+        )}
+        {publicError && (
+          <div className="community-feed-error" role="alert">
+            <p>{publicError}</p>
+            <button type="button" className="btn btn-outline" onClick={() => void retryPublic()}>Try again</button>
+          </div>
+        )}
+        {publicHasMore && !publicError && (
+          <button type="button" className="btn btn-outline community-load-more" disabled={publicLoading} onClick={() => void loadMorePublic()}>
+            {publicLoading ? "Loading…" : "Load more videos"}
+          </button>
+        )}
+        {communityResults.length === 0 && !publicLoading && (
           <div className="community-feed-empty">
             <strong>
               {communityVideos.length

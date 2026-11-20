@@ -17,6 +17,7 @@ class ProfileSettingsTest(unittest.TestCase):
     def setUp(self):
         from backend.database import database
         with database() as db:
+            db.execute("DELETE FROM user_videos")
             db.execute("UPDATE users SET account_visibility='public',measurements_visible=false,library_visible=false,likes_visible=false,saves_visible=false,skeletons_visible=false,calendar_visible=false")
 
     def test_username_bio_validation_and_existing_session(self):
@@ -54,6 +55,21 @@ class ProfileSettingsTest(unittest.TestCase):
             self.assertIsNone(private[key])
         own=self.alice.get(url).json()
         self.assertIn(self.video_id,[v['id'] for v in own['videos']])
+
+    def test_merged_author_endpoint_honors_profile_and_library_privacy(self):
+        db_support.upload_sample(self)
+        url=f'/api/users/{self.alice_id}/profile'
+        self.assertEqual(self.bob.get(url).json()['videos'], [])
+        flags=dict(account_visibility='public',calendar_visible=False,library_visible=True)
+        self.alice.patch('/api/profile/privacy',json=flags)
+        self.assertIn(self.video_id,[v['id'] for v in self.bob.get(url).json()['videos']])
+        self.alice.patch('/api/profile/privacy',json={**flags,'account_visibility':'private'})
+        hidden=self.bob.get(url).json()
+        self.assertEqual(hidden['account_visibility'],'private')
+        self.assertEqual(hidden['videos'],[])
+        self.assertEqual(hidden['public_video_count'],0)
+        self.assertEqual(hidden['display_name'],'')
+        self.assertEqual(self.bob.get('/api/videos/'+self.video_id).status_code,200)
 
     def test_skeleton_sharing_revokes_with_source_or_profile(self):
         from backend.database import database

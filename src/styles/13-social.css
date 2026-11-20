@@ -1,0 +1,81 @@
+/* B: persistent Community interactions - comment sheet, counts, danmaku, comment likes,
+   replies, timestamps and feed paging. Loaded last: it only adds rules for new elements
+   and tightens the action rail, which gained comment/share/danmaku buttons. */
+.community-tiktok-actions .action-count { font-size:12px; font-weight:600; line-height:1; color:#fff; text-shadow:0 1px 3px #000a; }
+.community-tiktok-actions .comments-action svg { fill:transparent; }
+.comment-sheet-backdrop { position:absolute; inset:0; z-index:20; display:flex; align-items:flex-end; background:#0008; }
+.comment-sheet { width:100%; max-height:72dvh; overflow-y:auto; padding:6px 16px max(18px,env(safe-area-inset-bottom)); border-radius:18px 18px 0 0; background:#fff; color:#20374a; overscroll-behavior:contain; }
+.comment-sheet-header { position:sticky; top:0; z-index:1; display:flex; align-items:center; justify-content:space-between; padding:6px 0 0; background:#fff; }
+.comment-sheet-header > span { width:36px; height:4px; margin:0 auto; border-radius:2px; background:#d6e1ea; }
+.comment-sheet-header button { position:absolute; right:0; width:36px; height:36px; border:0; background:transparent; color:#5c7184; font-size:24px; line-height:1; cursor:pointer; }
+.comment-sheet .comment-section { margin-top:0; border-top:0; padding-top:8px; }
+.comments-status { margin:0 0 16px; color:#63778a; font-size:14px; }
+.comments-error { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; padding:10px 12px; border-radius:12px; background:#fff3f0; color:#8a3b2a; font-size:14px; }
+.comments-error p { margin:0; }
+.comments-error-inline { margin:0 0 10px; color:#a2412c; font-size:13px; }
+.comments-more { display:block; margin:-8px 0 16px 42px; }
+.comment-actions button:disabled { opacity:.6; cursor:default; }
+.community-feed-status { margin:12px 0; color:#526f87; text-align:center; font-size:14px; }
+.community-feed-error { display:flex; flex-direction:column; align-items:center; gap:10px; padding:18px 14px; border-radius:14px; background:#fff3f0; color:#8a3b2a; text-align:center; font-size:14px; }
+.community-feed-error p { margin:0; }
+.community-load-more { align-self:center; margin-top:4px; }
+
+
+/* Danmaku, comment likes, replies, share */
+.danmaku-layer { position:absolute; z-index:1; top:max(72px,calc(env(safe-area-inset-top) + 60px)); left:0; right:0; height:136px; overflow:hidden; pointer-events:none; }
+.danmaku { position:absolute; left:100%; white-space:nowrap; font-size:15px; font-weight:600; line-height:28px; color:#fff; text-shadow:0 1px 2px #000, 0 0 6px #0009; animation:danmaku-fly 7s linear forwards; will-change:transform; }
+.danmaku.is-mine { padding:0 9px; border:1px solid #ffffffc0; border-radius:15px; background:#0003; }
+.danmaku-layer.is-paused .danmaku { animation-play-state:paused; }
+@keyframes danmaku-fly { from { transform:translateX(0); } to { transform:translateX(calc(-1 * var(--travel, 420px) - 100%)); } }
+@media (prefers-reduced-motion: reduce) { .danmaku { animation-duration:12s; } }
+.community-tiktok-actions .danmaku-action span { display:grid; width:30px; height:30px; place-items:center; border:1.8px solid currentColor; border-radius:8px; opacity:.65; }
+.community-tiktok-actions .danmaku-action span svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; }
+.community-tiktok-actions .danmaku-action.is-on span { opacity:1; background:#fff; color:#111; border-color:#fff; }
+.community-tiktok-actions .share-action svg { fill:transparent; }
+.community-tiktok-actions { gap:14px; bottom:120px; }
+.comment-like { flex:0 0 36px; display:flex; flex-direction:column; align-items:center; gap:1px; padding:4px 0 0; border:0; background:transparent; color:#8193a4; font:inherit; font-size:11px; cursor:pointer; }
+.comment-like svg { width:18px; height:18px; fill:transparent; stroke:currentColor; stroke-width:1.9; }
+.comment-like.is-liked { color:#ff3b61; }
+.comment-like.is-liked svg { fill:#ff3b61; }
+.comment-like:focus-visible,.comment-time:focus-visible { outline:2px solid #315fce; outline-offset:2px; border-radius:4px; }
+.comment-time { display:inline-block; margin-right:6px; padding:0 6px; border:0; border-radius:8px; background:#e6f0ff; color:#315fce; font:inherit; font-size:12px; font-weight:600; line-height:20px; vertical-align:1px; }
+button.comment-time { cursor:pointer; }
+.comment-mention { color:#315fce; font-weight:600; }
+.reply-controls { display:flex; gap:14px; }
+.replying-to { display:flex; align-items:center; justify-content:space-between; padding:7px 10px 0 13px; color:#526b82; font-size:12px; }
+.replying-to button { border:0; background:transparent; color:#728496; font-size:18px; line-height:1; cursor:pointer; }
+
+/* N2.7 Follow button beside the author name in the Community viewer */
+.community-tiktok-author .follow-button { flex:0 0 auto; padding:3px 12px; border:1px solid #fff; border-radius:999px; background:#ff3b61; border-color:#ff3b61; color:#fff; font:inherit; font-size:12px; font-weight:600; line-height:18px; cursor:pointer; }
+.community-tiktok-author .follow-button.is-following { background:transparent; border-color:#ffffffa0; color:#fff; }
+.community-tiktok-author .follow-button:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+
+/* N2.8: author link in the Community viewer and the author page. */
+.community-tiktok-author .author-link { display:flex; align-items:center; gap:8px; min-width:0; padding:0; border:0; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+.community-tiktok-author .author-link > span { display:grid; flex:0 0 34px; width:34px; height:34px; place-items:center; border:1px solid #ffffff99; border-radius:50%; background:#477da5; font-weight:700; }
+.community-tiktok-author .author-link:focus-visible { outline:2px solid #fff; outline-offset:3px; border-radius:18px; }
+.author-page { display:grid; gap:18px; align-content:start; }
+.author-hero { display:grid; grid-template-columns:64px 1fr; gap:12px 14px; align-items:center; padding:18px; border-radius:16px; background:#fff; box-shadow:0 1px 3px #0f2a4014; }
+.author-avatar { display:grid; width:64px; height:64px; place-items:center; border-radius:50%; background:#477da5; color:#fff; font-size:26px; font-weight:700; }
+.author-identity h1 { margin:0; font-size:21px; line-height:1.2; }
+.author-identity small { color:#6a7f91; }
+.author-stats { grid-column:1 / -1; display:grid; grid-template-columns:repeat(3,1fr); margin:0; text-align:center; }
+.author-stats dt { color:#6a7f91; font-size:12px; }
+.author-stats dd { margin:2px 0 0; font-size:18px; font-weight:700; }
+.author-follow { grid-column:1 / -1; min-height:42px; border:1px solid #ff3b61; border-radius:999px; background:#ff3b61; color:#fff; font:inherit; font-weight:700; cursor:pointer; }
+.author-follow.is-following { background:transparent; color:#c4223f; }
+.author-follow:focus-visible { outline:2px solid #315fce; outline-offset:2px; }
+.author-self-note { grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
+.author-self-note p { margin:0; color:#4b6275; font-size:14px; }
+.author-videos h2 { margin:0 0 10px; font-size:17px; }
+.author-video-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; margin:0; padding:0; list-style:none; }
+.author-video-grid button { display:grid; gap:4px; width:100%; padding:0; border:0; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+.author-video-grid button > :first-child { aspect-ratio:9 / 14; width:100%; overflow:hidden; border-radius:12px; object-fit:cover; }
+.author-video-grid span { overflow:hidden; font-size:14px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+.author-video-grid small { color:#315fce; font-size:12px; }
+.author-video-grid button:focus-visible { outline:2px solid #315fce; outline-offset:2px; border-radius:12px; }
+.author-privacy-note { margin:14px 0 0; color:#6a7f91; font-size:13px; }
+/* Expanded composer: text on its own row, hint and Post underneath, so long hints never squeeze the text. */
+.compact-composer.is-expanded > .comment-input-wrap { flex-wrap:wrap; }
+.comment-section .compact-composer.is-expanded textarea { flex:1 0 100%; width:100%; }
+.compact-composer.is-expanded .comment-compose-footer { flex:1 0 100%; justify-content:space-between; padding:0 6px 5px 11px; }

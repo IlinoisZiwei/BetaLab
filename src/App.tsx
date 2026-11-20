@@ -15,6 +15,7 @@ import { RoutePage } from "./app/pages/RoutePage"
 import { BetaPage } from "./app/pages/BetaPage"
 import { WorkspacePage } from "./app/pages/WorkspacePage"
 import { LibraryPage } from "./app/pages/LibraryPage"
+import { AuthorPage } from "./features/community/AuthorPage"
 
 function App() {
   const { pages, shell } = useAppController()
@@ -52,6 +53,7 @@ function App() {
     workspace: workspaceScreen,
     beta: betaDetailScreen,
     library: null,
+    author: <AuthorPage {...pages.authorScreen} />,
   }
   return (
     <div className="prototype-shell">
@@ -183,7 +185,7 @@ function App() {
                 tab.id === screen ||
                 (tab.id === "gyms" &&
                   ["gallery", "route", "workspace"].includes(screen)) ||
-                (tab.id === "community" && screen === "beta")
+                (tab.id === "community" && ["beta", "author"].includes(screen))
               return (
                 <button
                   key={tab.id}

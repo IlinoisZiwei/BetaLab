@@ -27,3 +27,6 @@ data/compute/
 # Local historical backups are intentionally never published.
 /docs/archive/
 /before-*.css
+
+# Database/media backups (python -m backend.db.backup): user data and password hashes, never commit
+/backups/
