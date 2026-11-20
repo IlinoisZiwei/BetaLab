@@ -42,7 +42,7 @@ The [GitHub Pages site](https://ilinoisziwei.github.io/BetaLab/) is a static fro
 | New-video inputs | Extraction, contact versions, local calibration; measured-input panel assembly/camera alignment and unified export | Real handheld calibration data, automatic moving-camera recovery, body depth/source reconstruction and adaptation |
 | Trial2 geometry | v5 source and target diagnostic previews | Baselines still fail; source-motion investigation is currently paused |
 | Result presentation | Separate examples, diagnostics and gated technique results | Full-model checks and real technique comparison are not implemented in the current flow |
-| Social interactions | Persistent comments with one level of replies, comment likes, timestamped danmaku, video likes/saves/shares, want-to-try routes and follow; Community feed paging; share links | Author page and right-swipe entry (N2.8), private-account follow rules (N1.2); bundled samples stay read-only examples |
+| Social interactions | Persistent comments with one level of replies, comment likes, timestamped live comments (danmaku), video likes/saves/shares, want-to-try routes and follow, on uploads and bundled samples alike; author page from a tap or right swipe (N2.8); Community feed paging; share links | Private-account follow rules and account visibility (N1.2, N2.5); see `docs/SOCIAL_API.md` |
 
 Task completion means computation and storage finished. It does not mean the climbing movement passed geometric or physical validation.
 
@@ -192,7 +192,7 @@ Browser requests use same-origin `/api`, session cookies and `X-CSRF-Token` on a
 | Notifications | `GET /notifications`; `PATCH /notifications/{id}/read` |
 | Comments | `GET` / `POST /videos/{id}/comments` (top level, paged; `total_with_replies`); `GET /comments/{id}/replies`; `DELETE /comments/{id}` (author only); `PUT` / `DELETE /comments/{id}/like` |
 | Video reactions | `PUT` / `DELETE /videos/{id}/like` and `/videos/{id}/save`; `POST /videos/{id}/share`; `GET /videos/{id}/danmaku`; `GET /social/videos?ids=` (counts and own state for up to 100 ids); `GET /me/saved-videos` |
-| Routes and people | `GET /me/wanted-routes`; `PUT` / `DELETE /routes/{id}/want`; `PUT` / `DELETE` / `GET /users/{id}/follow`; `GET /me/following` |
+| Routes and people | `GET /me/wanted-routes`; `PUT` / `DELETE /routes/{id}/want`; `PUT` / `DELETE` / `GET /users/{id}/follow`; `GET /me/following`; `GET /users/{id}/profile` (author page: public view only) |
 
 All routes above have the `/api` prefix. Interactive OpenAPI describes exact payloads. Compute [schemas and fixtures](docs/compute/examples/) remain machine-readable examples; authoritative models are `contracts.py` and `input_schema.py`. Exporting examples uses `python -m backend.compute.export_examples` in the API environment.
 
