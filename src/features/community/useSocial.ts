@@ -25,6 +25,8 @@ export function useSocial({ session, authEpoch, flash, onExpired, visibleVideos,
   const [social, setSocial] = useState<Record<string, SocialSummary>>({})
   const [savedVideos, setSavedVideos] = useState<SavedVideo[]>([])
   const [wantedRoutes, setWantedRoutes] = useState<string[]>([])
+  // N2.7: accounts this user follows. Following never unlocks private content.
+  const [following, setFollowing] = useState<string[]>([])
   const requested = useRef(new Set<string>())
   const pending = useRef(new Set<string>())
   // Danmaku preference is per browser; off by default for people who prefer reduced motion.
@@ -43,7 +45,7 @@ export function useSocial({ session, authEpoch, flash, onExpired, visibleVideos,
   }
 
   const reset = () => {
-    setSocial({}); setSavedVideos([]); setWantedRoutes([])
+    setSocial({}); setSavedVideos([]); setWantedRoutes([]); setFollowing([])
     requested.current = new Set(); pending.current = new Set()
   }
 
@@ -64,6 +66,9 @@ export function useSocial({ session, authEpoch, flash, onExpired, visibleVideos,
     void refreshSaved()
     socialApi.wantedRoutes()
       .then(result => { if (epoch === authEpoch.current) setWantedRoutes(result.items.map(item => item.route_id)) })
+      .catch(() => {})
+    socialApi.following()
+      .then(result => { if (epoch === authEpoch.current) setFollowing(result.items.map(item => item.id)) })
       .catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user.id])
@@ -147,6 +152,27 @@ export function useSocial({ session, authEpoch, flash, onExpired, visibleVideos,
     }
   }
 
+  const toggleFollow = async (userId: string) => {
+    if (!session) { onExpired(); return }
+    if (!isUserVideoId(userId) || userId === session.user.id) return
+    const key = `follow:${userId}`
+    if (pending.current.has(key)) return
+    pending.current.add(key)
+    const epoch = authEpoch.current
+    const was = following.includes(userId)
+    setFollowing(ids => (was ? ids.filter(id => id !== userId) : [...ids, userId]))
+    try {
+      const result = await socialApi.setFollowing(userId, !was, session.csrf_token)
+      if (epoch === authEpoch.current) setFollowing(ids => (result.following ? [...new Set([...ids, userId])] : ids.filter(id => id !== userId)))
+    } catch (error) {
+      if (epoch !== authEpoch.current) return
+      setFollowing(ids => (was ? [...new Set([...ids, userId])] : ids.filter(id => id !== userId)))
+      failed(error)
+    } finally {
+      pending.current.delete(key)
+    }
+  }
+
   const updateCommentCount = (videoId: string, total: number) =>
     setSocial(current => ({ ...current, [videoId]: { ...(current[videoId] ?? emptySummary), comment_count: total } }))
 
@@ -176,7 +202,7 @@ export function useSocial({ session, authEpoch, flash, onExpired, visibleVideos,
   }
 
   return {
-    social, savedVideos, wantedRoutes, danmakuOn,
-    toggleSocial, toggleWanted, updateCommentCount, shareVideo, toggleDanmaku, forgetVideo, reset,
+    social, savedVideos, wantedRoutes, danmakuOn, following,
+    toggleSocial, toggleWanted, toggleFollow, updateCommentCount, shareVideo, toggleDanmaku, forgetVideo, reset,
   }
 }
