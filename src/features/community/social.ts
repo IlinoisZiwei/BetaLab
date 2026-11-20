@@ -59,6 +59,9 @@ export const socialApi = {
     return result
   },
   savedVideos: () => api<{ items: SavedVideo[] }>("/me/saved-videos?limit=100"),
+  following: () => api<{ items: { id: string; username: string; display_name: string; followed_at: string }[] }>("/me/following"),
+  setFollowing: (userId: string, following: boolean, csrf: string) =>
+    api<{ following: boolean; follower_count: number }>(`/users/${encodeURIComponent(userId)}/follow`, { method: following ? "PUT" : "DELETE", csrf }),
   wantedRoutes: () => api<{ items: { route_id: string; created_at: string }[] }>("/me/wanted-routes"),
   setWanted: (routeId: string, wanted: boolean, csrf: string) =>
     api<{ wanted: boolean }>(`/routes/${encodeURIComponent(routeId)}/want`, { method: wanted ? "PUT" : "DELETE", csrf }),

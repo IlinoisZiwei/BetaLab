@@ -22,6 +22,8 @@ export function CommunityVideoPage({
   updateCommentCount,
   setComputeVideo,
   setExpandedCommunityDescription,
+  following,
+  toggleFollow,
 }: Props) {
   // B2.8: comments open in a bottom sheet over the playing video, TikTok-style.
   const [commentsFor, setCommentsFor] = useState<string | null>(null)
@@ -140,6 +142,18 @@ export function CommunityVideoPage({
                         video.username ||
                         "Community member"}
                     </strong>
+                    {/* N2.7: follow real uploaders other than yourself; samples have no account. */}
+                    {!video.is_preset_sample && session && video.owner_id !== session.user.id && (
+                      <button
+                        type="button"
+                        className={`follow-button${following.includes(video.owner_id) ? " is-following" : ""}`}
+                        aria-pressed={following.includes(video.owner_id)}
+                        aria-label={`${following.includes(video.owner_id) ? "Unfollow" : "Follow"} ${video.display_name || video.username || "this climber"}`}
+                        onClick={() => void toggleFollow(video.owner_id)}
+                      >
+                        {following.includes(video.owner_id) ? "Following" : "Follow"}
+                      </button>
+                    )}
                     <small>
                       {video.is_preset_beta
                         ? "Public · Preset Community Beta"

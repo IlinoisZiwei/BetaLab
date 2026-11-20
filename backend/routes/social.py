@@ -1,5 +1,5 @@
 """B: Community interactions - comments and replies, comment likes, danmaku,
-shares, video likes, saved Beta and want-to-try routes.
+shares, video likes, saved Beta, want-to-try routes and follows.
 
 Every rule follows the video's own access rule (videos.video_for_access): the
 owner, or any signed-in user while the video is public. Anything a user may
@@ -320,3 +320,56 @@ def unwant_route(route_id: str, session=Depends(current_session)):
     with database() as db:
         db.execute('DELETE FROM wanted_routes WHERE user_id = %s AND route_id = %s', (session['id'], route_id))
     return {'wanted': False}
+
+
+# ------------------------------------------------------------------ follows (N2.7)
+
+def _follow_state(db, followee_id, follower_id):
+    row = db.execute('SELECT count(*) AS followers, '
+                     'bool_or(follower_id = %s) AS following FROM follows WHERE followee_id = %s',
+                     (follower_id, followee_id)).fetchone()
+    return {'following': bool(row['following']), 'follower_count': row['followers']}
+
+
+def _existing_user(db, user_id):
+    parse_uuid(user_id, 'User not found')
+    if not db.execute('SELECT 1 FROM users WHERE id = %s', (user_id,)).fetchone():
+        raise HTTPException(404, 'User not found')
+
+
+@router.put('/api/users/{user_id}/follow')
+def follow_user(user_id: str, session=Depends(current_session)):
+    """Idempotent. Following someone does not unlock any of their private content."""
+    with database() as db:
+        _existing_user(db, user_id)
+        if str(session['id']) == str(parse_uuid(user_id)):
+            raise HTTPException(422, 'You cannot follow yourself')
+        db.execute('INSERT INTO follows(follower_id, followee_id) VALUES (%s, %s) ON CONFLICT DO NOTHING',
+                   (session['id'], user_id))
+        return _follow_state(db, user_id, session['id'])
+
+
+@router.delete('/api/users/{user_id}/follow')
+def unfollow_user(user_id: str, session=Depends(current_session)):
+    with database() as db:
+        _existing_user(db, user_id)
+        db.execute('DELETE FROM follows WHERE follower_id = %s AND followee_id = %s', (session['id'], user_id))
+        return _follow_state(db, user_id, session['id'])
+
+
+@router.get('/api/users/{user_id}/follow')
+def follow_status(user_id: str, session=Depends(current_session)):
+    with database() as db:
+        _existing_user(db, user_id)
+        return _follow_state(db, user_id, session['id'])
+
+
+@router.get('/api/me/following')
+def following(session=Depends(current_session)):
+    """Accounts the caller follows (public identity only), newest first."""
+    with database() as db:
+        rows = db.execute('SELECT u.id, u.username, u.display_name, f.created_at FROM follows f '
+                          'JOIN users u ON u.id = f.followee_id WHERE f.follower_id = %s ORDER BY f.created_at DESC',
+                          (session['id'],)).fetchall()
+    return {'items': [{'id': str(r['id']), 'username': r['username'], 'display_name': r['display_name'],
+                       'followed_at': r['created_at'].isoformat()} for r in rows]}

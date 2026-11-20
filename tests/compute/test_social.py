@@ -228,5 +228,32 @@ class SocialTest(unittest.TestCase):
         self.assertEqual(self.bob.get('/api/me/wanted-routes').json()['items'], [])
 
 
+    # ----------------------------------------------------------- follows
+
+    def test_follow_is_idempotent_and_never_self(self):
+        self.assertEqual(self.bob.put(f'/api/users/{self.alice_id}/follow').json(), {'following': True, 'follower_count': 1})
+        self.assertEqual(self.bob.put(f'/api/users/{self.alice_id}/follow').json(), {'following': True, 'follower_count': 1})
+        self.assertEqual(self.carol.put(f'/api/users/{self.alice_id}/follow').json()['follower_count'], 2)
+        self.assertEqual(self.alice.get(f'/api/users/{self.alice_id}/follow').json(), {'following': False, 'follower_count': 2})
+        self.assertEqual(self.alice.put(f'/api/users/{self.alice_id}/follow').status_code, 422)
+        self.assertEqual(self.alice.put(f'/api/users/{uuid4()}/follow').status_code, 404)
+        self.assertEqual(self.alice.put('/api/users/not-a-uuid/follow').status_code, 404)
+        self.assertEqual([u['id'] for u in self.bob.get('/api/me/following').json()['items']], [self.alice_id])
+        self.assertEqual(self.alice.get('/api/me/following').json()['items'], [])
+        self.assertEqual(self.bob.delete(f'/api/users/{self.alice_id}/follow').json(), {'following': False, 'follower_count': 1})
+        self.assertEqual(self.bob.delete(f'/api/users/{self.alice_id}/follow').json(), {'following': False, 'follower_count': 1})
+        self.carol.delete(f'/api/users/{self.alice_id}/follow')
+
+    def test_following_does_not_unlock_private_videos(self):
+        private = self.make_video(self.alice_id, 'private')
+        self.bob.put(f'/api/users/{self.alice_id}/follow')
+        try:
+            self.assertEqual(self.bob.get(f'/api/videos/{private}').status_code, 404)
+            self.assertEqual(self.bob.get(f'/api/videos/{private}/comments').status_code, 404)
+            self.assertNotIn(private, [v['id'] for v in self.bob.get('/api/videos?owned=false').json()['items']])
+        finally:
+            self.bob.delete(f'/api/users/{self.alice_id}/follow')
+
+
 if __name__ == '__main__':
     unittest.main()
