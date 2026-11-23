@@ -1,0 +1,38 @@
+[
+  {
+    "id": "trial1",
+    "name": "Trial 1",
+    "height": 180,
+    "span": null,
+    "seconds": 13.9,
+    "view": "2D schematic",
+    "video": "demo/trial1.mp4",
+    "poster": "demo/poster1.jpg",
+    "wall": "demo/wall1.jpg",
+    "sha256": "e444fcfa5727a5047b5363b87a68dc7ad06ba445a9565e92ca0a3f1a99357bdc"
+  },
+  {
+    "id": "trial2",
+    "name": "Corner Study",
+    "height": 170.0,
+    "span": 175.0,
+    "seconds": 32.53,
+    "view": "3D diagnostic",
+    "video": "demo/trial2.mp4",
+    "poster": "demo/poster2.jpg",
+    "wall": "demo/wall2.jpg",
+    "sha256": "35b39f498bbb03802f5de2879b4812922efa41d5a89595198418b31178f9b873"
+  },
+  {
+    "id": "trial3",
+    "name": "Trial 3",
+    "height": 180,
+    "span": null,
+    "seconds": 16.77,
+    "view": "2D schematic",
+    "video": "demo/trial3.mp4",
+    "poster": "demo/poster3.jpg",
+    "wall": "demo/wall3.jpg",
+    "sha256": "d7ebe4c2e3c58185676327d7c03951f15ee330126c0ef48b38a1c8ecb92acae5"
+  }
+]

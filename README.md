@@ -1,5 +1,7 @@
 # BetaLab
 
+**Public, no-login demo:** [Watch all three skeleton studies](https://ilinoisziwei.github.io/BetaLab/demo.html). This separate static page plays approved pre-generated videos; it does not provide accounts, uploads, saved collections or live computation.
+
 [English](README.md) · [简体中文](README.zh-CN.md)
 
 A mobile-first climbing prototype built with React, TypeScript, Vite, FastAPI and PostgreSQL. This handbook describes the **implementation verified locally as of November 23, 2026**; this does not imply that the deployed site includes every feature. It replaces the separate phase reports and handoff guides; their originals remain in a local-only archive, excluded from Git commits and pushes.

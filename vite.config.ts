@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
     build: {
       sourcemap: emitSourcemaps ? 'inline' : false,
       minify: !emitSourcemaps,
-      rollupOptions: { input: { main: path.resolve(__dirname, 'index.html'), compute: path.resolve(__dirname, 'compute.html') } },
+      rollupOptions: { input: { demo: path.resolve(__dirname, 'demo.html'), main: path.resolve(__dirname, 'index.html'), compute: path.resolve(__dirname, 'compute.html') } },
     },
     plugins: [
       react(),

@@ -1,5 +1,7 @@
 # BetaLab
 
+**公开免登录 Demo：**[观看三个骨架案例](https://ilinoisziwei.github.io/BetaLab/demo.html)。这是独立静态页面，播放已授权公开的预生成视频，不提供账号、上传、个人收藏或实时计算。
+
 [English](README.md) · [简体中文](README.zh-CN.md)
 
 BetaLab 是一个使用 React、TypeScript、Vite、FastAPI 和 PostgreSQL 的移动端优先攀岩原型。本手册描述 **截至 2026 年 11 月 23 日在本地核验的实现**，不代表已部署网站包含全部功能。本手册统一替代此前分散的阶段报告和交接说明。原文仅保存在本地归档包中，不随 Git 提交或推送。
