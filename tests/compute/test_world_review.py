@@ -63,3 +63,20 @@ class WorldReviewTest(unittest.TestCase):
         pose = storage.root()/'published'/self.task_id/'pose.npz'
         pose.write_bytes(b'changed')
         self.assertEqual(self.alice.get(self.path,params={'version':saved['version']}).status_code,409)
+
+    def test_reconstruction_package_pins_and_rechecks_dependencies(self):
+        response = self.alice.post(self.path, json=self.review)
+        self.assertEqual(response.status_code, 200, response.text)
+        version = response.json()['version']
+        path = '/api/tasks/'+self.task_id+'/reconstruction-inputs'
+        response = self.alice.post(path, json={'world_version':version})
+        self.assertEqual(response.status_code,200,response.text)
+        package=response.json()
+        self.assertFalse(package['generation_ready'])
+        self.assertEqual(package['contact_version'],self.review['contact_version'])
+        url=path+'/'+package['version']
+        self.assertEqual(self.alice.get(url).status_code,200)
+        self.assertEqual(self.bob.get(url).status_code,404)
+        self.assertEqual(self.alice.post(path,json={'world_version':'f'*64}).status_code,404)
+        self.alice.delete('/api/videos/'+self.video_id)
+        self.assertEqual(self.alice.get(url).status_code,404)

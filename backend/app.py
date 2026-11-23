@@ -7,6 +7,7 @@ from .database import database
 from .auth import current_session
 from .routes import accounts, catalog, social, videos
 from .compute.api import create_router
+from .compute.demo_previews import router as demo_router
 
 app = FastAPI(title='BetaLab API', version='0.1.0')
 ORIGINS = set(os.getenv('APP_ORIGINS', 'http://localhost:8443,http://127.0.0.1:8443').split(','))
@@ -45,3 +46,5 @@ app.include_router(catalog.router)
 app.include_router(videos.router)
 app.include_router(social.router)
 app.include_router(create_router(current_session))
+
+app.include_router(demo_router)

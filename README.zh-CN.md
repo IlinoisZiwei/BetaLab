@@ -2,7 +2,7 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
-BetaLab 是一个使用 React、TypeScript、Vite、FastAPI 和 PostgreSQL 的移动端优先攀岩原型。本手册描述 **截至 2026 年 11 月 19 日在本地核验的实现**，不代表已部署网站包含全部功能。本手册统一替代此前分散的阶段报告和交接说明。原文仅保存在本地归档包中，不随 Git 提交或推送。
+BetaLab 是一个使用 React、TypeScript、Vite、FastAPI 和 PostgreSQL 的移动端优先攀岩原型。本手册描述 **截至 2026 年 11 月 23 日在本地核验的实现**，不代表已部署网站包含全部功能。本手册统一替代此前分散的阶段报告和交接说明。原文仅保存在本地归档包中，不随 Git 提交或推送。
 
 ## 目录
 
@@ -163,7 +163,7 @@ npm run dev -- --host 127.0.0.1 --port 5173
 
 - **上传：**选择路线 → Add my video → 标题和 Private/Public → 上传。保存与分析提交是两个独立操作；分析失败不会删除视频。刷新可以恢复任务；若提交未到达服务器，可显示 Start analysis。重试创建新 attempt。
 - **Community：**已登录用户可浏览公开用户视频。Community Beta 筛选 `share_as_beta=true` 的公开视频；该主动分享允许显示上传者身材作比较。预置 sample 仍是示例，不是用户上传记录。
-My skeletons 和 Notifications 入口仅位于 My Library 内的收藏分类上方。点击 My skeletons 展开历史任务；从 Community 提交生成后仍会自动打开对应任务。其他页面继续后台轮询，但不再显示占用首页布局的工具栏。
+My Page 内的 My Library 包含 My Skeletons 分类；通知铃铛可打开任务通知。从 Community 提交生成后自动打开对应任务，后台轮询不占用首页布局。
 
 - **个人骨架：**打开真实 Community 视频 → Generate beta → 获取该视频的源分析 → 输入身高臂展 → 提交 → My Library / My skeletons → 通知或已保存结果。请求绑定实际视频与分析版本，不用同路线其他视频替代。目前仅支持已有 Trial2 源分析的诊断生成。
 - **新视频核查：**输入准备完成后打开 New video inputs → 查看候选和参考图 → 核查标定 → 保存。输入完成不解锁个人生成。
@@ -223,7 +223,7 @@ My skeletons 和 Notifications 入口仅位于 My Library 内的收藏分类上�
 
 产物包括采样视频、参考图、编号岩点、mask、姿态、身份/对齐数据、帧映射、接触记录/事件、摘要与来源。视频是采样输入录像，**不是生成的骨架**。检测分数和 `accepted_model` 接触不等于人工确认；缺失观测、单应变换和视差仍有局限。
 
-当前标定编辑器是开发核查用 JSON 工具。选择岩点 ID；每面墙填写凸多边形、按墙面网格左上 → 右上 → 右下 → 左下排序的四角、横纵孔间隔数、相对水平角度（未知为 null）及测量说明。点击参考图可读取像素坐标。填写的是孔间隔数，不是孔数量。
+标定编辑器提供墙面与网格的引导式输入，并保留高级 JSON 视图。选择岩点 ID；每面墙填写凸多边形、按墙面网格左上 → 右上 → 右下 → 左下排序的四角、横纵孔间隔数、相对水平角度（未知为 null）及测量说明。点击参考图可读取像素坐标。填写的是孔间隔数，不是孔数量。
 
 保存生成不可变版本，拒绝过期更新、未知岩点、错误参考帧或非法几何。输出为各墙面局部厘米坐标；位于所有面外或多个面重叠区的岩点保持未分配/歧义状态。核查人物后才确认身份；标定 JSON 的 `contact_reviewed` 保持 false，接触确认通过独立版本记录。全局墙面/相机核查现有独立入口，但真实录像尚缺测量数据，且源动作适配未接入；新视频继续保持 `generation_ready=false`。
 
@@ -231,7 +231,7 @@ My skeletons 和 Notifications 入口仅位于 My Library 内的收藏分类上�
 
 在 My skeletons 打开已完成的新视频输入任务 → New video inputs → Contact and release review。可载入自动候选，修改四肢、岩点、接触起始帧与释放帧，增加/删除区间，标记 hold、free 或 unknown，并记录观察说明。对照编号岩点图和独立的视频播放器，可跳转到接触与释放位置。自动候选不会自动成为人工确认；编辑后需要重新勾选核查确认，也可先保存草稿。
 
-时间轴为采样后的分析帧，区间采用 `[start_frame, release_frame)`。例如15 fps 时 [3,9) 包含第3–8帧，对应0.2–0.6秒；释放帧可等于总帧数。上游 Beta Translator 的闭区间 `end_frame` 转换为 `release_frame=end_frame+1`，代码中已注明来源。未覆盖区间及不确定的墙面/地面接触保持 unknown；只有观察到离开墙面时才标记 free。不同肢体可同时接触同一岩点，同一肢体的区间不能重叠。岩点必须来自该任务的候选；目前不支持新增漏检岩点。
+时间轴为采样后的分析帧，区间采用 `[start_frame, release_frame)`。例如15 fps 时 [3,9) 包含第3–8帧，对应0.2–0.6秒；释放帧可等于总帧数。上游 Beta Translator 的闭区间 `end_frame` 转换为 `release_frame=end_frame+1`，代码中已注明来源。未覆盖区间及不确定的墙面/地面接触保持 unknown；只有观察到离开墙面时才标记 free。不同肢体可同时接触同一岩点，同一肢体的区间不能重叠。岩点必须来自该任务的候选或明确固定的人工岩点版本；可在参考图编辑器中补充漏检岩点。
 
 保存绑定任务、源视频和五个原始产物的 SHA-256，形成独立不可变版本，保存在私有 `COMPUTE_STORAGE_DIR/contact-reviews/{task_id}/`。原始预测、标定和 Trial2 证据均不被覆盖。并发旧版本更新返回409；页面保留未保存编辑，用户可选择重新加载。可查看当前/上一版本，旧版本可以继续按 ID 读取。保存确认仅代表人工审核这些区间，不表示未知区间已解决或几何/力学通过。
 
@@ -401,6 +401,71 @@ A 负责账号/视频基础、存储、部署和备份恢复；B 负责目录/�
 6. 测量完整录像耗时、测试真实设备、与 B 改善开发用标定编辑器，并在算法改变后更新备用包和交接证据。
 
 按当前项目决定，源动作诊断和真实技巧比较继续暂缓。社交持久化、部署和设备演练需要 A/B 协作。邮件找回密码、系统级推送、用户创建场馆/路线、云端扩容和自动备份工具不属于已完成原型。
+
+### C 本轮交付与验收 — 2026-11-21
+
+基于 main `2185169`。没有改动或重跑 Trial2 源动作拟合，没有改变失败基线，也没有运行真实技巧比较。实现完成与最终验收分开记录，详见 `docs/DEMO_IMPLEMENTATION_PLAN.md`。
+
+| 项目 | 本轮已交付 | 仍需验收的边界 |
+| --- | --- | --- |
+| 1. 状态核对 | 按代码与证据修正 C 任务表 | 实现勾选不代表全组最终签收 |
+| 2. 新版界面联调 | My Page／My Skeletons、通知跳转、刷新恢复；修复 Skeletons 混入 Want to Try 内容 | 新版完整实时 Trial2 源→目标计算仍暂停；流程用明确标识的模拟计算，播放用不可变历史真实结果 |
+| 3. 双账号权限 | API 权限矩阵及浏览器源视频改私有后撤权 | 真实跨设备演练 |
+| 4. 运行恢复 | 幂等、单 worker、进程中断恢复、重启持久化、结果与通知原子性测试 | 最终 3–5 人现场演练 |
+| 5. 进度与错误 | 真实阶段、已耗时、最后更新时间、排队/处理分段及重试指引 | 不显示虚构百分比或 ETA |
+| 6. 耗时 | 完整 Trial3 输入提取 73.94 秒和 71.95 秒；251 帧、15 fps、720×1280 | 暂定本录像/本机输入准备目标≤120秒，不是通用骨架预览承诺；尚无受控冷启动/实机性能结论 |
+| 7. 完整视频输入核查 | 结构审计、全片概览、候选核查，独立验收库中保存接触草稿 | 精确接触/释放边界未全部确认；草稿不是动作真值 |
+| 8. 岩点修正 | 在参考图补漏检岩点或改中心点；不可变版本、边界、来源和权限检查 | 不猜测掩膜和岩点大小，每项仍需核查 |
+| 9. 引导式标定 | 墙面边界/网格点击、撤销点、孔距区间数、未知角度、身份和备注；保留高级 JSON | 全局折线拼接/相机数值仍使用高级编辑器；真实测量验收待完成 |
+| 10. 固定重建输入 | 接触/标定岩点版本一致性校验、不可变重建输入包 | 不等同于重建 worker、深度求解或生成骨架 |
+| 11. 展示准备 | 本机 preflight、历史 v5 校验、独立库/上传/产物备份与临时库恢复、交接步骤 | 确认展示机器、真实手机及 3–5 位参与者 |
+
+**新输入流程：**已完成的新视频任务 → Correct or add holds → 保存 → 重新核查接触，只确认有证据的区间 → 保存墙面标定 → 全局对齐。新增岩点 ID 以 `manual-` 开头，坐标基于采样参考图；中心修正不推断分割掩膜。自动产物不被覆盖。接触与标定固定 `hold_review_version`，两者一致才允许全局对齐；历史导出仍可读取。新岩点版本不会静默修改旧接触或几何。岩点输入变化时保留未保存的接触编辑，需明确重新加载才采用新版本。
+
+新增 API 均需登录且仅限拥有者：`GET/POST /api/tasks/{id}/hold-review`；`POST /api/tasks/{id}/reconstruction-inputs`（`world_version` 及可选、带来源的 `source_body`）；`GET /api/tasks/{id}/reconstruction-inputs/{version}`。输入包固定视频、标定、接触、全局版本、代码/输入哈希与覆盖范围，始终保留 `generation_ready=false`；新视频深度重建/适配尚未实现。重启 API/worker 前先应用 **015_compute_timing.sql**。旧任务的 `started_at`/`finished_at` 保持空值，不伪造排队与处理时间。
+
+**Trial3 实际发现：**开头左脚 H056 候选覆盖从地面移到墙面的过程，不能整段确认为同一岩点接触。已在草稿中改为 unknown；其他候选尚未确认，包括约 10.8–13.7 秒模型接受率偏低的右手事件。两次提取均得到 57 个岩点和 1,004 条四肢观测；模型接受率与对齐标记不代表独立精度验证。没有套用 Trial2 角度。2026-11-19 实测的 Trial2 源/目标总耗时仍作为历史记录：353.62 秒和 88.22 秒，均为诊断结果；本轮未重新测量。
+
+**验证：**普通后端 84 项通过（发现 120 项、按环境跳过 36 项）；另启用科学 API 3 项、科学几何 5 项、前端/构建 16 项、浏览器 4 项均通过；TypeScript 和生产构建通过。浏览器覆盖新版双账号模拟流程与撤权、不可变历史真实结果播放、新岩点/接触编辑及合成全局标定。历史结果夹具只允许已知提示文案和渲染文件的版本差异，核对其 `73a8daa` 原始哈希，不改写来源、不授权真实求解复用。备份恢复到独立临时库验证：18 张表、1 个原视频和 13 个计算产物匹配；没有覆盖用户的实时预览库。
+
+证据保留在 Git 忽略的 `backend/compute/runs/c-readiness/`：`acceptance-summary.json`、`full-trial3/audit.json`、`trial3-review-receipt.json`、测试日志、`preview-preflight.json`、备份和备用包校验。测试凭据、原视频和产物只留本地。只读审计命令：`python -m backend.compute.input_audit <提取产物目录>`。原 v5 包未改动，已校验且仍明确标为历史预生成结果；不能为匹配最新代码哈希而将它重新标成新计算结果。
+
+
+### 11月22日：放大对比播放
+
+诊断预览改为骨架在上、原视频在下；各画面为960×540，合成为960×1180的同步视频。只绘制有效墙面接触记录涉及的岩点；这是显示筛选，不代表新增接触真值验证。已有本地结果使用单独校验哈希的 `display_video` / `display_poster` / `display_provenance` 展示产物，保留原视频和科学计算来源记录。不重跑源动作拟合、诊断或技巧比较。新增展示回归覆盖上下顺序、尺寸、帧数及未使用/未获支持岩点的隐藏。
+
+骨架画面使用固定、等比例的聚焦范围，覆盖整段投影动作与有效接触岩点，四周各留12%余量，避免动态缩放抖动。原视频不裁剪，时间轴和诊断结论保持不变。
+
+### 11月23日：三个案例的本地展示账号
+
+`betalab_showcase` 账号已保存三个**预生成演示**。Movement Fishtown 下新增两条演示路线，明确标注 `Demo case · venue unverified`；目录归类不代表已确认拍摄岩馆。原视频在本地 Community 公开，账号自己的已保存列表保持私有。密码放在被 Git 忽略的 `demo/showcase.local.json`，不会提交，也禁止通过 Vite 直接下载。
+
+| 案例 | 已准备结果 | 范围 |
+| --- | --- | --- |
+| Trial1 · Demo Study | 417帧／13.90秒，模型身高180cm | 已有 refined-support 二维轨迹；原攀爬者尺寸未知，未单独设定臂展 |
+| Corner Study · Demo | 976帧／32.53秒，界面显示原结果目标尺寸 | 历史 Trial2 聚焦诊断；基线失败结论保持不变 |
+| Trial3 · Demo Study | 503帧／16.77秒，模型身高180cm | 已有 full-sequence 二维轨迹；原攀爬者尺寸未知，未单独设定臂展 |
+
+操作路径：Community → **Generate beta／Use skeleton** → **Prepared skeleton demo** → **Save demo to My Skeletons** → My Page → My Skeletons → Saved demonstrations。重复保存不会重复添加，也不会排队计算或修改演示的身体尺寸。保留诊断和限制；上方为聚焦的二维骨架／接触示意，下方为完整原视频，竖屏录像留边、不拉伸。墙面缩略图来自各自原录像，不是合成标定几何。
+
+迁移 `016_demo_previews.sql` 将预生成演示、个人保存与计算任务分开。`/api/demo-previews` 接口在读取元数据、已保存列表、墙图及视频分段时检查登录与原视频可见性，并校验媒体哈希。原视频改私有或删除后，其他账号失去访问权限。演示源拒绝提交分析；普通上传和已有 Trial2 流程保持原行为。
+
+**算法接入边界：** `backend.compute.demo_algorithm` 是对固定版本 CIS5810 `trial1_refinement_pipeline` 和 `full_sequence_pipeline` 的本地离线适配入口，尚不是新增网页计算 worker。两个输入加载器均已通过本地核查，没有执行求解。默认只检查输入；执行还必须同时指定 `--execute` 和 `BETALAB_DEMO_COMPUTE_ENABLED=1`，产物写到上游独立运行目录，不调用 Trial2 或技巧比较。这两个入口支持身高与模板比例，不支持独立输入臂展；网页实时生成继续关闭，待 worker 接入及验证。
+
+```sh
+# 使用科学计算 Python；以下仅核查输入，不运行求解器。
+"$BETA_TRANSLATOR_ROOT/.venv/bin/python" -m backend.compute.demo_algorithm trial1 --source "$BETA_TRANSLATOR_ROOT"
+"$BETA_TRANSLATOR_ROOT/.venv/bin/python" -m backend.compute.demo_algorithm trial3 --source "$BETA_TRANSLATOR_ROOT"
+# 启动／重启 API 前应用迁移。
+backend/.venv/bin/python -m backend.db.manage migrate --direct
+# 准备本地产物并填写被忽略的配置后：
+backend/.venv/bin/python -m backend.db.demo_catalog demo/showcase.local.json
+```
+
+`demo/showcase.example.json` 不含真实密码；复制成本地配置后替换密码与 `<BETA_TRANSLATOR_ROOT>` 占位符。`backend.compute.demo_render SOURCE RUN DESTINATION` 校验原视频、轨迹及已生成视频哈希，再从已有关节坐标独立导出展示，不重做拟合。当前源结果目录是 `outputs/trial1/refined_support/target_180cm_f1456408fd1d` 和 `outputs/trial3/full_sequence/target_180cm_787124fd4c70`。保留 summary、展示来源和产物哈希；渲染必须使用新目录。Corner Study 导入保留历史结果来源。重复 seed 复用原视频和保存项，不重置密码。视频与产物均在忽略目录 `data/uploads/`、`data/compute/`；此次不部署公开后端。
+
+验证：普通后端88项通过（本次发现125项，37项按环境跳过）；新增4项覆盖保存、隔离／撤权、分段／完整性／CSRF及算法默认关闭。另行运行的本地浏览器演示测试通过 Community → 保存 → 刷新重开、三个视频及两张墙图接口检查；渲染回归、16项前端／构建、TypeScript和生产构建通过。浏览器测试需 `BETALAB_DEMO_BROWSER=1`；截图在 `backend/compute/runs/showcase-check/`。输入验证日志明确 `algorithm_run=false`，不能当作拟合成功。
 
 <a id="history"></a>
 ## 13. 引用与版本历史

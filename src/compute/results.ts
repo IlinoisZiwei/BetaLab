@@ -12,7 +12,7 @@ export type Result = { kind: string; is_mock: boolean; source_video_id: string; 
   original_body?: Body; target_body?: Body; frame_count: number; fps: number;
   quality: { warnings: string[]; evidence: string; check_scope: string };
   suggestions: Suggestion[]; moments: Moment[]; artifacts: Record<string, unknown> }
-export type Task = { id: string; kind: string; source_video_id: string; created_at: string; state: string; stage: string;
+export type Task = { id: string; kind: string; source_video_id: string; created_at: string; updated_at?: string; started_at?: string | null; finished_at?: string | null; state: string; stage: string;
   is_mock: boolean; result?: Result; error?: { message: string; retryable: boolean } }
 
 export function classifyResult(result: Result) {

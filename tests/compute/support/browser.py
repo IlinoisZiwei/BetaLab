@@ -34,7 +34,21 @@ def setup_browser(cls):
     from backend.compute.real_job import input_hashes
     from backend.compute.storage import digest
     provenance=json.loads((report.parent/saved['artifacts']['provenance']['storage_key']).read_text())
-    assert provenance['input_sha256']==input_hashes(Path(os.environ['BETA_TRANSLATOR_ROOT']))
+    current = input_hashes(Path(os.environ['BETA_TRANSLATOR_ROOT']))
+    recorded = provenance['input_sha256']
+    changed = {k for k in set(current) | set(recorded) if current.get(k) != recorded.get(k)}
+    if changed:
+        # These GUI-only suites display immutable historical diagnostics (before localization/presentation changes).
+        # Do not relabel their provenance or permit new solver runs from them.
+        assert getattr(cls, 'historical_display_only', False), sorted(changed)
+        assert changed <= {'betalab/moments.py', 'betalab/geometry_scope.py', 'betalab/render_video.py'}, sorted(changed)
+        import hashlib
+        for key in changed:
+            original = subprocess.check_output(['git','show','73a8daa:backend/compute/'+key.split('/')[-1]])
+            assert hashlib.sha256(original).hexdigest() == recorded[key]
+        (cls.output/'historical-fixture.json').write_text(json.dumps(dict(
+            purpose='Display/input review only; no source fitting or target adaptation',
+            recorded_source='73a8daa', changed_since_recording=sorted(changed)),indent=2))
     for artifact in saved['artifacts'].values():
         original=report.parent/artifact['storage_key'];assert digest(original)==artifact['sha256']
         target=cls.output/artifact['storage_key'];target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(original,target)

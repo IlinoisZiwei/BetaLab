@@ -61,8 +61,18 @@ export function WorldReview({ taskId, csrf }: { taskId: string; csrf?: string })
     } catch (e) { if (alive.current) setError((e as Error).message) }
     finally { lock.current = false; if (alive.current) setBusy(false) }
   }
+  async function packageInputs() {
+    if (!saved?.version || busy) return
+    setBusy(true); setError('')
+    try {
+      const pack = await api<{version: string}>(path + '/reconstruction-inputs', {method:'POST',csrf,body:{world_version:saved.version}})
+      setMessage(`Pinned input package: ${pack.version}. This is not a generated skeleton; reconstruction is still pending.`)
+    } catch (e) { setError((e as Error).message) }
+    finally { setBusy(false) }
+  }
   const referenceCamera = summary && saved?.cameras?.[String(summary.reference_frame)]
   return <section className="contact-review" aria-label="Global wall alignment">
+    {saved?.version && <button type="button" disabled={busy || !csrf || dirty} onClick={() => void packageInputs()}>Prepare versioned reconstruction inputs</button>}
     <h4>Global wall and camera alignment</h4>
     <p>14.3 cm hole spacing alone is insufficient. This step needs measured wall folds and camera
       intrinsics for the analysis image. Missing values stay unknown; no Trial2 angles are copied.</p>

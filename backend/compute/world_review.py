@@ -27,6 +27,12 @@ def dependencies(task_id, owner_id, review):
     expected = hash_json(dict(task=str(task_id),input_sha=hashes['input_summary'],review=calibration['review']))
     if expected != review.calibration_version: raise HTTPException(409,'Calibration version or inputs changed')
     CalibrationReview.model_validate(calibration['review'])
+    hold_version = calibration['review'].get('hold_review_version')
+    from . import hold_review
+    holds = hold_review.read(task_id, owner_id, hold_version, latest=False)['holds']
+    if contact_review.pinned_holds(task_id, review.contact_version) != hold_version:
+        raise HTTPException(409, 'Calibration and contacts must use the same hold review version')
+    if hold_version: hashes['hold_review_version'] = hold_version
     contacts = contact_review.export(task_id,owner_id,review.contact_version)
     hashes['calibration_document'] = storage.digest(calibration_path)
     hashes['contact_version'] = review.contact_version

@@ -226,7 +226,7 @@ export function LibraryPage({
           )}
         </section>
       )}
-      {libraryTab !== "attempts" && (
+      {(libraryTab === "saved" || libraryTab === "wanted") && (
         <div className="library-list">
           {libraryItems.map((item) => (
             <button

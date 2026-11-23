@@ -45,7 +45,7 @@ if __name__ == '__main__':
         data = json.loads(sys.stdin.read())
         review = SimpleNamespace(**{**data, 'planes': [SimpleNamespace(**p) for p in data['planes']]})
         print(json.dumps(transform_points(review, json.loads(Path(sys.argv[1]).read_text()),
-                                          json.loads(Path(sys.argv[2]).read_text())), allow_nan=False))
+                                          data.get('_holds', json.loads(Path(sys.argv[2]).read_text()))), allow_nan=False))
     except ValueError as error:
         print(str(error), file=sys.stderr)
         sys.exit(1)

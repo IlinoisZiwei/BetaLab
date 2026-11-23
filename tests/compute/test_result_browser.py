@@ -9,6 +9,7 @@ from support import browser as community
 
 @unittest.skipUnless(os.getenv('BETALAB_RESULT_BROWSER_TEST')=='1','Requires result browser opt-in')
 class ResultBrowserTest(unittest.TestCase):
+    historical_display_only = True
     @classmethod
     def start(cls,name,cmd): community.start(cls,name,cmd)
     @classmethod
@@ -23,7 +24,7 @@ class ResultBrowserTest(unittest.TestCase):
             page.goto('http://127.0.0.1:5177')
             page.get_by_label('Username',exact=True).fill('phase2alice');page.get_by_label('Password',exact=True).fill('phase2-local-test-only')
             page.get_by_role('button',name='Sign in',exact=True).last.click()
-            page.get_by_role('button',name=re.compile(r'^My Library(?: |$)')).click();page.get_by_role('button',name='My skeletons',exact=True).click()
+            page.get_by_role('button',name=re.compile(r'^My Page(?: |$)')).click();page.get_by_role('button',name='My Skeletons',exact=True).click()
             page.get_by_role('button',name=re.compile('Source analysis · Completed')).click()
             categories=page.get_by_label('Result categories',exact=True)
             expect(categories.get_by_role('heading',name='Diagnostic issues',exact=True)).to_be_visible()
@@ -46,6 +47,7 @@ class ResultBrowserTest(unittest.TestCase):
             self.assertEqual(examples.locator('button,a').count(),0)
             page.screenshot(path=str(self.output/'result-categories-mobile.png'),full_page=True)
             # Reopen the actual owned upload in Workspace: it uses the same result panel.
+            page.get_by_role('button',name='My Attempts',exact=True).click()
             page.locator('.attempt-gym-group > summary').filter(has_text='Test Gym').click()
             page.locator('.attempt-route-group > summary').filter(has_text='Trial2').click()
             page.locator('.history-row').filter(has_text='Verified Trial2 source').click()
@@ -55,7 +57,8 @@ class ResultBrowserTest(unittest.TestCase):
             expect(page.get_by_label('Source analysis video',exact=True)).to_be_visible()
             page.screenshot(path=str(self.output/'workspace-diagnostics-mobile.png'),full_page=True)
             # Another owned upload with no analysis must not inherit the previous result.
-            page.get_by_role('button',name=re.compile(r'^My Library(?: |$)')).click();page.get_by_role('button',name='My skeletons',exact=True).click()
+            page.get_by_role('button',name=re.compile(r'^My Page(?: |$)')).click();page.get_by_role('button',name='My Skeletons',exact=True).click()
+            page.get_by_role('button',name='My Attempts',exact=True).click()
             page.locator('.attempt-gym-group > summary').filter(has_text='Test Gym').click()
             page.locator('.attempt-route-group > summary').filter(has_text='Trial2').click()
             page.locator('.history-row').filter(has_text='No analysis video').click()

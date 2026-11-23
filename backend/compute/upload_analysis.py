@@ -23,6 +23,8 @@ def status(video_id, owner_id):
         video = service.source(db, video_id, owner_id)
         if str(video['owner_id']) != str(owner_id):
             raise HTTPException(404, 'Only the uploader can manage source analysis')
+        if db.execute('SELECT 1 FROM demo_previews WHERE video_id=%s', (video_id,)).fetchone():
+            return dict(task=None, can_start=False, reason='Prepared demonstration: live computation is disabled.')
         row = db.execute(service.SELECT + "WHERE t.source_video_id=%s AND t.owner_id=%s AND t.kind='analyze' "
                          'ORDER BY t.created_at DESC,t.id DESC LIMIT 1', (video_id, owner_id)).fetchone()
     if row:

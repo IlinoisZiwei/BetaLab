@@ -2,7 +2,7 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
-A mobile-first climbing prototype built with React, TypeScript, Vite, FastAPI and PostgreSQL. This handbook describes the **implementation verified locally as of November 19, 2026**; this does not imply that the deployed site includes every feature. It replaces the separate phase reports and handoff guides; their originals remain in a local-only archive, excluded from Git commits and pushes.
+A mobile-first climbing prototype built with React, TypeScript, Vite, FastAPI and PostgreSQL. This handbook describes the **implementation verified locally as of November 23, 2026**; this does not imply that the deployed site includes every feature. It replaces the separate phase reports and handoff guides; their originals remain in a local-only archive, excluded from Git commits and pushes.
 
 ## Contents
 
@@ -163,7 +163,7 @@ For LAN testing, bind Vite to `0.0.0.0`, add the exact LAN origin to `APP_ORIGIN
 
 - **Upload:** choose a route → Add my video → title and Private/Public → upload. Saving and analysis submission are separate operations: an analysis failure does not delete the video. Refresh can recover the task or offer Start analysis if submission never reached the server. Retry creates a new attempt.
 - **Community:** public user videos are browsable by signed-in users. Community Beta filters public videos with `share_as_beta=true`; that opt-in exposes uploader measurements for comparison. Bundled samples remain examples, not uploaded records.
-My skeletons and Notifications are available only inside My Library, above the collection tabs. Opening My skeletons reveals saved tasks; Community generation still opens the selected task automatically. Background polling continues on other pages without adding a toolbar to the home layout.
+My Page contains the My Library collections, including the My Skeletons tab. The notification bell opens task notifications; Community generation opens the selected skeleton task automatically. Background polling does not add a toolbar to the home layout.
 
 - **Personal skeleton:** open an actual Community video → Generate beta → retrieve its source analysis → enter height and arm span → submit → My Library / My skeletons → notification or saved result. Requests bind to the actual video and analysis version, never a substitute from the same route. Currently only the supported Trial2 analysis can seed this diagnostic flow.
 - **New-video review:** after input preparation, open New video inputs → inspect candidates and reference image → review calibration → save. Input completion does not unlock personal generation.
@@ -223,7 +223,7 @@ Source fitting and target adaptation preserve declared contact order/timing. The
 
 Artifacts include sampled video, reference image, numbered holds, masks, pose, identity/alignment data, frame map, contact rows/events, summary and provenance. The video is the sampled input recording, **not a generated skeleton**. Detector scores and `accepted_model` contacts are not human confirmation; missing observations and homography/parallax limitations remain relevant.
 
-The current calibration editor is a developer JSON review tool. Select hold IDs; supply each convex wall polygon, four grid corners ordered top-left → top-right → bottom-right → bottom-left in wall-grid coordinates, horizontal/vertical interval counts, angle from horizontal (null if unknown), and measurement notes. Click the reference image for pixel coordinates. Count hole intervals, not holes.
+The calibration editor provides guided panel/grid inputs and an advanced JSON view. Select hold IDs; supply each convex wall polygon, four grid corners ordered top-left → top-right → bottom-right → bottom-left in wall-grid coordinates, horizontal/vertical interval counts, angle from horizontal (null if unknown), and measurement notes. Click the reference image for pixel coordinates. Count hole intervals, not holes.
 
 Saved reviews have immutable versions and reject stale updates, unknown holds, wrong reference frames or invalid geometry. Coordinates are plane-local centimeters. Holds outside all panels or in overlapping panels remain unassigned/ambiguous. Confirm identity only after review; calibration JSON keeps `contact_reviewed=false`, with contact confirmation tracked in a separate version. Global wall/camera review now has a separate entry, but real footage lacks measured inputs and source adaptation is not integrated; new videos retain `generation_ready=false`.
 
@@ -231,7 +231,7 @@ Saved reviews have immutable versions and reject stale updates, unknown holds, w
 
 Open a completed new-video input task in My skeletons → New video inputs → Contact and release review. Load automatic candidates, change limb/hold assignments and contact/release frames, add/remove intervals, mark hold/free/unknown, and record observations. Use the numbered hold image and dedicated video player to inspect contact/release moments. Candidates are not automatically human-confirmed; edits require confirmation again, and drafts can be saved.
 
-Times use sampled analysis frames with half-open intervals `[start_frame, release_frame)`. At 15 fps, [3,9) covers frames 3–8 and 0.2–0.6 seconds; release may equal frame count. Beta Translator's inclusive `end_frame` converts to `release_frame=end_frame+1`, with attribution in code. Gaps and unresolved wall/ground contact remain unknown; mark free only when visibly off the wall. Different limbs may share a hold; intervals for one limb cannot overlap. Holds must come from this task's candidates; adding missed holds is not implemented.
+Times use sampled analysis frames with half-open intervals `[start_frame, release_frame)`. At 15 fps, [3,9) covers frames 3–8 and 0.2–0.6 seconds; release may equal frame count. Beta Translator's inclusive `end_frame` converts to `release_frame=end_frame+1`, with attribution in code. Gaps and unresolved wall/ground contact remain unknown; mark free only when visibly off the wall. Different limbs may share a hold; intervals for one limb cannot overlap. Holds must come from this task's candidates or an explicitly pinned human hold-review version; missed holds can be added in the reference-image editor.
 
 Saving binds the task, source video and five original artifact SHA-256 values into an immutable version in private `COMPUTE_STORAGE_DIR/contact-reviews/{task_id}/`. Predictions, calibration and Trial2 evidence are not overwritten. Stale concurrent updates return409; the UI retains unsaved edits and offers reload. Current/previous versions can be inspected; historical versions remain addressable. Confirmation means the intervals were reviewed, not that unknown gaps are resolved or geometry/mechanics passed.
 
@@ -401,6 +401,71 @@ Recommended C sequence:
 6. Measure full-length latency, test real devices, improve the developer calibration editor with B, and update standby/handoff evidence after algorithm changes.
 
 Source-motion diagnostics and real technique comparison remain paused by the current project decision. Social persistence, deployment and device rehearsal need A/B collaboration. Email recovery, operating-system push notifications, user-created gyms/routes, cloud scaling and automatic backup tooling are outside the completed prototype.
+
+### C readiness round — 2026-11-21
+
+Based on main `2185169`. Trial2 source fitting, its failed baseline and real technique comparison were not changed or rerun. Implementation and final acceptance are tracked separately in `docs/DEMO_IMPLEMENTATION_PLAN.md`.
+
+| Item | Delivered in this round | Remaining acceptance |
+| --- | --- | --- |
+| 1. Status reconciliation | C checklist corrected against code and test evidence | Team sign-off is not implied by an implementation checkbox |
+| 2. Latest UI integration | My Page / My Skeletons test navigation, notification routing, refresh recovery; fixed Want to Try content leaking into Skeletons | Fresh real Trial2 source→target run is paused; latest lifecycle test uses explicit mocks, playback uses immutable historical real output |
+| 3. Two-account access | API access matrix and browser source-privacy revocation | Physical cross-device rehearsal |
+| 4. Operational recovery | Idempotency, singleton worker, process-crash recovery, restart persistence and atomic result/notification tests | Final 3–5-person live exercise |
+| 5. Progress and errors | Real stage names, elapsed time, last update, queue/processing split, actionable retry guidance | No invented percentage or ETA |
+| 6. Timing | Full Trial3 input extraction: 73.94 s and 71.95 s, 251 frames at 15 fps, 720×1280 | Provisional ≤120 s input-preparation target applies only to this recording/Mac; no general preview SLA or controlled cold-start/device benchmark |
+| 7. Full-video input audit | Structural audit, visual overview, candidate review and persistent contact draft in isolated acceptance DB | Exact contact/release boundaries remain unconfirmed; draft is not ground truth |
+| 8. Hold correction | Add missed holds or correct centers on reference image; immutable versions, bounds, provenance and access checks | No invented masks/hold size; inspect every correction |
+| 9. Guided calibration | Panel boundary/grid clicks, point undo, interval counts, unknown angle fields, identity and notes; advanced JSON remains | Global seam/camera numerical review still uses the advanced editor; real measured validation remains pending |
+| 10. Pinned reconstruction inputs | Calibration/contact hold-version agreement and immutable reconstruction input packages | Not a reconstruction worker, depth solver or skeleton-generation result |
+| 11. Demo readiness | Local preflight, verified historical v5 fallback, isolated DB/upload/compute backup and scratch restore, handoff script | Confirm presentation machine, real phone and 3–5 participants |
+
+**New input workflow:** open a completed new-video task → Correct or add holds → save → recheck contacts and explicitly confirm only supported intervals → save wall calibration → global alignment. Hold IDs for additions start with `manual-`; coordinates use the original sampled reference image. A correction changes a center, not a segmentation mask. Automatic files remain untouched. Contact and calibration documents pin `hold_review_version`; their versions must agree before global alignment. Historical exports remain addressable. New hold versions do not silently revise old contacts or geometry. Unsaved contact edits are retained when hold inputs change; reload explicitly to adopt the new version.
+
+API additions (authenticated, owner-only): `GET/POST /api/tasks/{id}/hold-review`, `POST /api/tasks/{id}/reconstruction-inputs` with `world_version` and optional provenance-tagged `source_body`, and `GET /api/tasks/{id}/reconstruction-inputs/{version}`. Packages bind the source, calibration, contacts, world review, code/input hashes and coverage. They retain `generation_ready=false`; new-video depth reconstruction/adaptation is not implemented. Migrate **015_compute_timing.sql** before restarting the API/worker. Historical `started_at`/`finished_at` stay null, so the UI does not fabricate a queue/processing split.
+
+**Actual Trial3 finding:** the initial left-foot H056 candidate spans a floor-to-wall transition and is unsupported as one confirmed hold interval. The review draft changes it to unknown; other candidates remain unconfirmed, including low-acceptance right-hand events around 10.8–13.7 s. Both extraction runs structurally produced 57 holds and 1,004 limb observations. Model acceptance and alignment flags are not independent accuracy evidence. No Trial2 angles were transferred. Historical Trial2 timings from the 2026-11-19 live walkthrough remain 353.62 s source and 88.22 s target, both diagnostic; they were not remeasured in this round.
+
+**Validation:** 84 ordinary backend tests passed (120 discovered, 36 environment-gated skips), three separately enabled scientific API tests, five scientific geometry tests, 16 frontend/build tests and four browser cases passed. TypeScript and production build passed. Browser cases cover the latest two-account mock lifecycle/revocation, immutable historical real playback, new hold/contact editing and synthetic global alignment. The historical fixture accepts only the known localization and renderer-file differences, verifies their recorded `73a8daa` hashes, and never relabels old provenance or enables real solver reuse. Backup verification restored the isolated acceptance database to a scratch database: 18 tables, one original video and 13 compute artifacts matched. This is not a restore of the user's live preview database.
+
+Evidence stays local and Git-ignored under `backend/compute/runs/c-readiness/`: `acceptance-summary.json`, `full-trial3/audit.json`, `trial3-review-receipt.json`, test logs, `preview-preflight.json`, backup and fallback verification. Local test credentials and raw media must stay there. The standalone read-only audit is `python -m backend.compute.input_audit <extracted-output-folder>`. The existing v5 fallback is unchanged, checksum-verified and explicitly historical; it must not be repackaged as a fresh run merely to match current code hashes.
+
+
+### November 22: clearer comparison playback
+
+Diagnostic previews now show the skeleton above the original recording, each at 960×540 within a 960×1180 synchronized video. Only holds present in supported wall-contact records are drawn; this is a display filter, not new contact validation. Existing local results use separately hashed `display_video` / `display_poster` / `display_provenance` artifacts, preserving original videos and scientific provenance. Source fitting, diagnostics and technique comparison are not rerun. A presentation regression checks panel order, dimensions, frame count and exclusion of unused/untrusted holds.
+
+The skeleton pane uses a fixed, aspect-preserving crop enclosing the full projected motion and supported contact holds, with 12% padding on each side. The original recording remains uncropped; timestamps and diagnostics are unchanged.
+
+### November 23: three-case local showcase
+
+The `betalab_showcase` account has three **saved, pre-generated demonstrations**. Two demo routes were added under Movement Fishtown, explicitly marked `Demo case · venue unverified`; this is catalog placement, not a verified venue attribution. Originals are public within the local Community; the account's saved collection is private. Credentials are in ignored `demo/showcase.local.json` (never committed or served by Vite).
+
+| Case | Prepared result | Scope |
+| --- | --- | --- |
+| Trial1 · Demo Study | 417 frames / 13.90 s, model height 180 cm | Existing refined-support 2D trajectory; original body unknown; arm span not independently specified |
+| Corner Study · Demo | 976 frames / 32.53 s, saved target measurements shown in UI | Historical focused Trial2 diagnostic; failed baseline unchanged |
+| Trial3 · Demo Study | 503 frames / 16.77 s, model height 180 cm | Existing full-sequence 2D trajectory; original body unknown; arm span not independently specified |
+
+Community → **Generate beta / Use skeleton** → **Prepared skeleton demo** → **Save demo to My Skeletons** → My Page → My Skeletons → Saved demonstrations. Saving is idempotent and never queues computation or changes the demo's body measurements. New results retain original diagnostics and limitations. The upper pane is a focused planar skeleton/contact schematic; the lower pane preserves the complete original frame with letterboxing. Wall thumbnails are extracted from each original recording, not synthesized geometry.
+
+Migration `016_demo_previews.sql` separates prepared demos and per-user saves from compute tasks. Authenticated `/api/demo-previews` endpoints recheck source visibility for metadata, saved listings, wall images and byte-range video delivery; checksums protect media integrity. A source made private/deleted ceases to be accessible to other users. Demo sources reject analysis submissions; ordinary upload/Trial2 workflows retain their existing behavior.
+
+**Algorithm connection:** `backend.compute.demo_algorithm` is an offline adapter to the pinned CIS5810 `trial1_refinement_pipeline` and `full_sequence_pipeline`. It is not a new web-generation worker. Both input loaders passed local validation without solving. Default operation checks inputs only; execution additionally requires `--execute` and `BETALAB_DEMO_COMPUTE_ENABLED=1`, writes a separate upstream output run, and never calls Trial2 or technique comparison. These entry points support height/template proportions, not independently entered arm span; browser generation for these two cases stays disabled pending worker integration and validation.
+
+```sh
+# Use the scientific Python; these commands validate inputs without running solvers.
+"$BETA_TRANSLATOR_ROOT/.venv/bin/python" -m backend.compute.demo_algorithm trial1 --source "$BETA_TRANSLATOR_ROOT"
+"$BETA_TRANSLATOR_ROOT/.venv/bin/python" -m backend.compute.demo_algorithm trial3 --source "$BETA_TRANSLATOR_ROOT"
+# Apply schema before starting/restarting the API.
+backend/.venv/bin/python -m backend.db.manage migrate --direct
+# After preparing local artifacts and filling the ignored config:
+backend/.venv/bin/python -m backend.db.demo_catalog demo/showcase.local.json
+```
+
+`demo/showcase.example.json` contains no credentials; replace its password and `<BETA_TRANSLATOR_ROOT>` placeholders in a local copy. `backend.compute.demo_render SOURCE RUN DESTINATION` validates original/trajectory/video hashes before producing a separate presentation from saved joints (no fit). Current source runs: `outputs/trial1/refined_support/target_180cm_f1456408fd1d` and `outputs/trial3/full_sequence/target_180cm_787124fd4c70`. Preserve summary, presentation provenance and artifact hashes. Rendering destinations must be new directories. The Corner Study import retains the historical result provenance. Seed reruns reuse originals and saved entries; no credential reset occurs. All video/artifact data remains under ignored `data/uploads/` and `data/compute/`; this does not deploy a public backend.
+
+Validation: 88 ordinary backend tests passed (125 discovered, 37 gated skips in that run); four new cases cover saves, isolation/revocation, range/integrity/CSRF and the default algorithm gate. Separately, the local browser showcase test passed Community → save → refresh/reopen, all three videos and both wall image endpoints. The renderer regression, 16 frontend/build tests, TypeScript and production build passed. Browser test requires `BETALAB_DEMO_BROWSER=1`; local screenshots are in `backend/compute/runs/showcase-check/`. Input validation logs distinguish `algorithm_run=false` from a successful fit.
 
 <a id="history"></a>
 ## 13. References and version history

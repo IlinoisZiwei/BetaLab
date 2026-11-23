@@ -19,6 +19,8 @@ test('extracted Vite plugins retain dev HTML, kit, API proxy and private-file de
   const privateFile = path.resolve('backend/compute/runs', `vite-deny-${process.pid}.txt`)
   fs.mkdirSync(path.dirname(privateFile), { recursive: true })
   fs.writeFileSync(privateFile, 'private-regression-sentinel')
+  const credentials = path.resolve('demo', `vite-deny-${process.pid}.local.json`)
+  fs.writeFileSync(credentials, 'private-regression-sentinel')
   let server: Awaited<ReturnType<typeof createServer>> | undefined
   try {
     server = await createServer({ server: { host: '127.0.0.1', port: 0, strictPort: false }, logLevel: 'silent' })
@@ -35,10 +37,10 @@ test('extracted Vite plugins retain dev HTML, kit, API proxy and private-file de
     const stories = await fetch(base + '/@id/__x00__virtual:figma-stories')
     assert.equal(stories.status, 200)
     assert.ok((await stories.text()).includes('export const stories'))
-    for (const prefix of ['auth/me', 'profile', 'gyms', 'routes', 'tasks', 'notifications', 'videos', 'comments/x', 'me/saved-videos', 'social/videos', 'users/x/follow']) {
+    for (const prefix of ['demo-previews/saved', 'auth/me', 'profile', 'gyms', 'routes', 'tasks', 'notifications', 'videos', 'comments/x', 'me/saved-videos', 'social/videos', 'users/x/follow']) {
       assert.deepEqual(await (await fetch(base + '/api/' + prefix)).json(), { path: '/api/' + prefix })
     }
-    for (const route of ['/backend/compute/runs/' + path.basename(privateFile), '/@fs' + privateFile]) {
+    for (const route of ['/backend/compute/runs/' + path.basename(privateFile), '/@fs' + privateFile, '/demo/' + path.basename(credentials), '/@fs' + credentials]) {
       const response = await fetch(base + route)
       assert.equal(response.status, 403)
       assert.ok(!(await response.text()).includes('private-regression-sentinel'))
@@ -47,6 +49,7 @@ test('extracted Vite plugins retain dev HTML, kit, API proxy and private-file de
     await server?.close()
     await new Promise<void>((resolve) => upstream.close(() => resolve()))
     fs.rmSync(privateFile, { force: true })
+    fs.rmSync(credentials, { force: true })
     if (previous === undefined) delete process.env.BETALAB_API_TARGET
     else process.env.BETALAB_API_TARGET = previous
   }

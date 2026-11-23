@@ -6,6 +6,8 @@ from . import service, upload_analysis, input_review, contact_review, world_revi
 from .input_schema import CalibrationReview
 from .contact_schema import ContactReview
 from .world_schema import WorldReview
+from . import hold_review, reconstruction_inputs
+from .hold_review import HoldReview
 from .media import artifact_response, source_artifact_response
 
 def create_router(current_session):
@@ -46,6 +48,14 @@ def create_router(current_session):
     def source_artifact(video_id: UUID, name: str, request: Request, session=Depends(current_session)):
         return source_artifact_response(video_id,name,session['id'],request)
 
+    @router.get('/tasks/{task_id}/hold-review')
+    def get_hold_review(task_id: UUID, version: str | None = Query(default=None, pattern=r'^[a-f0-9]{64}$'), session=Depends(current_session)):
+        return hold_review.read(task_id, session['id'], version)
+
+    @router.post('/tasks/{task_id}/hold-review')
+    def save_hold_review(task_id: UUID, body: HoldReview, session=Depends(current_session)):
+        return hold_review.save(task_id, session['id'], body)
+
     @router.get('/tasks/{task_id}/input-review')
     def get_input_review(task_id: UUID, session=Depends(current_session)):
         return input_review.read(task_id,session['id'])
@@ -55,8 +65,8 @@ def create_router(current_session):
         return input_review.save(task_id,session['id'],body)
 
     @router.get('/tasks/{task_id}/contact-review')
-    def get_contact_review(task_id: UUID, version: str | None = Query(default=None, pattern=r'^[a-f0-9]{64}$'), session=Depends(current_session)):
-        return contact_review.read(task_id, session['id'], version)
+    def get_contact_review(task_id: UUID, version: str | None = Query(default=None, pattern=r'^[a-f0-9]{64}$'), hold_version: str | None = Query(default=None, pattern=r'^[a-f0-9]{64}$'), session=Depends(current_session)):
+        return contact_review.read(task_id, session['id'], version, hold_version)
 
     @router.post('/tasks/{task_id}/contact-review')
     def save_contact_review(task_id: UUID, body: ContactReview, session=Depends(current_session)):
@@ -65,6 +75,14 @@ def create_router(current_session):
     @router.get('/tasks/{task_id}/contact-review/export')
     def export_contacts(task_id: UUID, version: str = Query(pattern=r'^[a-f0-9]{64}$'), session=Depends(current_session)):
         return contact_review.export(task_id, session['id'], version)
+
+    @router.post('/tasks/{task_id}/reconstruction-inputs')
+    def prepare_reconstruction(task_id: UUID, body: reconstruction_inputs.Preparation, session=Depends(current_session)):
+        return reconstruction_inputs.prepare(task_id, session['id'], body)
+
+    @router.get('/tasks/{task_id}/reconstruction-inputs/{version}')
+    def get_reconstruction(task_id: UUID, version: str, session=Depends(current_session)):
+        return reconstruction_inputs.read(task_id, session['id'], version)
 
     @router.get('/tasks/{task_id}/world-review')
     def get_world_review(task_id: UUID, version: str | None = Query(default=None, pattern=r'^[a-f0-9]{64}$'), session=Depends(current_session)):

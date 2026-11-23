@@ -28,7 +28,7 @@ class CommunityBrowserTest(unittest.TestCase):
             page=context.new_page();page.goto('http://127.0.0.1:5177')
             page.get_by_label('Username',exact=True).fill('phase2bob');page.get_by_label('Password',exact=True).fill('phase2-local-test-only')
             page.get_by_role('button',name='Sign in',exact=True).last.click()
-            expect(page.get_by_role('button',name='My skeletons',exact=True)).to_have_count(0)
+            expect(page.get_by_role('button',name='My Skeletons',exact=True)).to_have_count(0)
             def community(video_id):
                 page.get_by_role('button',name=re.compile(r'^Community(?: |$)')).last.click()
                 page.locator('.community-feed-card').filter(has_text='Verified Trial2 source' if video_id==self.source_id else 'No analysis video').click()
@@ -77,7 +77,7 @@ class CommunityBrowserTest(unittest.TestCase):
             video.evaluate('(v)=>{v.pause();v.currentTime=10}')
             expect(video).to_have_js_property('paused',True)
             page.screenshot(path=str(self.output/'result-mobile.png'),full_page=True)
-            page.reload();page.get_by_role('button',name=re.compile(r'^My Library(?: |$)')).click();page.get_by_role('button',name='My skeletons',exact=True).click()
+            page.reload();page.get_by_role('button',name=re.compile(r'^My Page(?: |$)')).click();page.get_by_role('button',name='My Skeletons',exact=True).click()
             page.get_by_role('button',name='Personal skeleton · Completed',exact=False).click()
             expect(page.get_by_label('Personal skeleton video',exact=True)).to_be_visible()
             self.assertEqual(self.alice.get('/api/tasks/'+task_id).status_code,404)
@@ -107,7 +107,7 @@ class CommunityBrowserTest(unittest.TestCase):
             page.goto('http://127.0.0.1:5177')
             page.get_by_label('Username',exact=True).fill('phase2bob');page.get_by_label('Password',exact=True).fill('phase2-local-test-only')
             page.get_by_role('button',name='Sign in',exact=True).last.click()
-            page.get_by_role('button',name=re.compile(r'^My Library(?: |$)')).click();page.get_by_role('button',name='My skeletons',exact=True).click()
+            page.get_by_role('button',name=re.compile(r'^My Page(?: |$)')).click();page.get_by_role('button',name='My Skeletons',exact=True).click()
             page.get_by_role('button',name='Personal skeleton · Failed',exact=False).click()
             expect(page.get_by_label('Selected skeleton task')).to_contain_text('Test interruption')
             with page.expect_response(lambda r:'/retry' in r.url and r.request.method=='POST') as retried:
@@ -119,9 +119,9 @@ class CommunityBrowserTest(unittest.TestCase):
             # Switch the authenticated browser session, then restore the main app.
             me=page.request.get('http://127.0.0.1:5177/api/auth/me').json()
             page.request.post('http://127.0.0.1:5177/api/auth/logout',headers={'Origin':'http://127.0.0.1:5177','X-CSRF-Token':me['csrf_token']})
-            page.reload();expect(page.get_by_role('button',name='My skeletons',exact=True)).to_have_count(0)
+            page.reload();expect(page.get_by_role('button',name='My Skeletons',exact=True)).to_have_count(0)
             page.get_by_label('Username',exact=True).fill('phase2alice');page.get_by_label('Password',exact=True).fill('phase2-local-test-only')
-            page.get_by_role('button',name='Sign in',exact=True).last.click();page.get_by_role('button',name=re.compile(r'^My Library(?: |$)')).click();page.get_by_role('button',name='My skeletons',exact=True).click()
+            page.get_by_role('button',name='Sign in',exact=True).last.click();page.get_by_role('button',name=re.compile(r'^My Page(?: |$)')).click();page.get_by_role('button',name='My Skeletons',exact=True).click()
             expect(page.get_by_role('button',name=re.compile('Personal skeleton'))).to_have_count(0)
             self.assertEqual(page.request.get('http://127.0.0.1:5177/api/tasks/'+new_task['id']).status,404)
             browser.close()

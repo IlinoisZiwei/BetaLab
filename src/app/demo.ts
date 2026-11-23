@@ -5,7 +5,7 @@ export const gyms = [
   {
     name: "Movement Fishtown",
     place: "North District",
-    count: 1 + movementRoutes.length,
+    count: 3 + movementRoutes.length,
   },
   { name: "Gym B", place: "West District", count: 0 },
 ]
@@ -19,6 +19,10 @@ export const routes = [
     version: "Set 02",
     archived: false,
   },
+  ...[1, 3].map(trial => ({
+    gym: "Movement Fishtown", id: `demo-trial${trial}`, name: `Trial ${trial} · Demo Study`,
+    grade: "Demo", version: "Demo case · venue unverified", archived: false,
+  })),
   ...movementRoutes,
 ]
 
@@ -94,6 +98,10 @@ export const mediaPath = (name: string) =>
   `${import.meta.env.BASE_URL}media/${name}`
 
 export const routeMedia = (id: string) => {
+  if (id === 'demo-trial1' || id === 'demo-trial3') {
+    const image = `/api/demo-previews/route/${id}/wall`
+    return { video: '', poster: image, wall: image, pose: null }
+  }
   const photo = movementRoutes.find((route) => route.id === id)
   if (photo) {
     const image = `${import.meta.env.BASE_URL}${photo.image}`

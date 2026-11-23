@@ -9,7 +9,7 @@ type Interval = {
 }
 type Saved = {
   version: string
-  review: { base_version: string | null; intervals: Interval[]; confirmed: boolean; notes: string }
+  review: { base_version: string | null; hold_review_version?: string | null; intervals: Interval[]; confirmed: boolean; notes: string }
   normalized: { unknown_limb_frames: number }
 }
 type Data = {
@@ -18,8 +18,9 @@ type Data = {
 }
 
 // Human corrections are separate from automatic artifacts and wall calibration.
-export function ContactReview({ taskId, csrf }: { taskId: string; csrf?: string }) {
+export function ContactReview({ taskId, csrf, holdVersion = null }: { taskId: string; csrf?: string; holdVersion?: string | null }) {
   const path = '/tasks/' + taskId + '/contact-review'
+  const loadedHoldVersion = useRef<string | null>(null)
   const [data, setData] = useState<Data | null>(null)
   const [intervals, setIntervals] = useState<Interval[]>([])
   const [notes, setNotes] = useState('')
@@ -34,16 +35,18 @@ export function ContactReview({ taskId, csrf }: { taskId: string; csrf?: string 
   const lock = useRef(false)
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
   useEffect(() => {
+    if (dirty) { setError('Hold inputs changed. Save or reload contact edits before switching hold versions.'); return }
     const controller = new AbortController()
     setData(null); setError(''); setMessage('')
-    api<Data>(path, { signal: controller.signal }).then(value => {
+    api<Data>(path + (holdVersion ? '?hold_version=' + holdVersion : ''), { signal: controller.signal }).then(value => {
       if (controller.signal.aborted) return
+      loadedHoldVersion.current = holdVersion
       setData(value); setIntervals(value.saved?.review.intervals ?? [])
       setNotes(value.saved?.review.notes ?? '')
-      setConfirmed(value.saved?.review.confirmed ?? false); setDirty(false)
+      setConfirmed((value.saved?.review.hold_review_version ?? null) === holdVersion && (value.saved?.review.confirmed ?? false)); setDirty(false)
     }).catch(e => { if (!controller.signal.aborted) setError(e.message) })
     return () => controller.abort()
-  }, [path, reload])
+  }, [path, reload, holdVersion])
   function edit(next: Interval[]) {
     setIntervals(next); setConfirmed(false); setDirty(true); setMessage('')
   }
@@ -55,7 +58,7 @@ export function ContactReview({ taskId, csrf }: { taskId: string; csrf?: string 
     lock.current = true; setBusy(true); setError(''); setMessage('')
     try {
       const saved = await api<Saved>(path, { method: 'POST', csrf,
-        body: { base_version: data.version, intervals, confirmed, notes } })
+        body: { base_version: data.version, hold_review_version: loadedHoldVersion.current, intervals, confirmed, notes } })
       if (!alive.current) return
       setData({ ...data, version: saved.version, saved }); setDirty(false)
       setMessage('Contact review saved. Unknown intervals remain unknown; generation remains blocked.')
@@ -69,7 +72,7 @@ export function ContactReview({ taskId, csrf }: { taskId: string; csrf?: string 
       Unresolved wall or ground contacts should stay unknown.</p>
     {error && <p role="alert">{error}</p>}
     <button type="button" disabled={busy} onClick={() => {
-      if (!dirty || window.confirm('Discard unsaved contact edits and reload?')) setReload(n => n + 1)
+      if (!dirty || window.confirm('Discard unsaved contact edits and reload?')) { setDirty(false); setReload(n => n + 1) }
     }}>Reload contact review</button>
     {data && <>
       <video ref={video} controls preload="metadata" aria-label="Contact reference video"

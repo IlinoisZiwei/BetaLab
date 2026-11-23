@@ -1,0 +1,74 @@
+{
+  "accounts": [
+    {
+      "username": "betalab_showcase",
+      "password": "CHANGE-ME-local-only",
+      "display_name": "BetaLab Demo",
+      "height_cm": 180,
+      "arm_span_cm": null
+    }
+  ],
+  "cases": [
+    {
+      "route_id": "demo-trial1",
+      "title": "Trial 1 \u00b7 Demo Study",
+      "original": "<BETA_TRANSLATOR_ROOT>/videos/trial1.mp4",
+      "target_height_cm": 180,
+      "frame_count": 417,
+      "artifacts": {
+        "video": "demo/trial1-v2/video.mp4",
+        "wall": "demo/trial1-v2/wall.jpg",
+        "summary": "demo/trial1-v2/summary.json",
+        "provenance": "demo/trial1-v2/presentation.json"
+      },
+      "limitations": [
+        "Pre-generated full-duration 2D diagnostic; not a validated 3D reconstruction.",
+        "Original climber measurements are unknown. Model uses 180 cm height and template proportions; arm span was not independently personalized.",
+        "Warning frames remain; no claim of climbing feasibility or technique improvement.",
+        "Demo catalog placement does not confirm the recording venue.",
+        "Soft global objectives seek improved poses; convergence is not a global optimum or physical validation.",
+        "Prospective COM intervals assume desired contacts can be reached; final audits independently exclude missed holds.",
+        "IRLS favors achievable contacts and can increase errors on incompatible contacts; all original targets remain audited."
+      ]
+    },
+    {
+      "route_id": "r1",
+      "title": "Corner Study \u00b7 Demo",
+      "original": "<BETA_TRANSLATOR_ROOT>/videos/trial2.mp4",
+      "target_height_cm": 170.0,
+      "target_arm_span_cm": 175.0,
+      "frame_count": 976,
+      "artifacts": {
+        "video": "demo/trial2-v1/video.mp4",
+        "wall": "demo/trial2-v1/wall.jpg",
+        "provenance": "demo/trial2-v1/provenance.json"
+      },
+      "limitations": [
+        "Historical Trial2 diagnostic. Geometric baseline failed; no techniques compared.",
+        "Pre-generated for the displayed measurements, not your current profile."
+      ]
+    },
+    {
+      "route_id": "demo-trial3",
+      "title": "Trial 3 \u00b7 Demo Study",
+      "original": "<BETA_TRANSLATOR_ROOT>/videos/trial3.mp4",
+      "target_height_cm": 180,
+      "frame_count": 503,
+      "artifacts": {
+        "video": "demo/trial3-v1/video.mp4",
+        "wall": "demo/trial3-v1/wall.jpg",
+        "summary": "demo/trial3-v1/summary.json",
+        "provenance": "demo/trial3-v1/presentation.json"
+      },
+      "limitations": [
+        "Pre-generated full-duration 2D diagnostic; not a validated 3D reconstruction.",
+        "Original climber measurements are unknown. Model uses 180 cm height and template proportions; arm span was not independently personalized.",
+        "Warning frames remain; no claim of climbing feasibility or technique improvement.",
+        "Demo catalog placement does not confirm the recording venue.",
+        "Contact centers and timing are unreviewed model predictions.",
+        "A joint global objective balances contact gaps, projected references, velocity and acceleration.",
+        "The 0.1 cm diagnostic threshold is numerical, not measurement accuracy."
+      ]
+    }
+  ]
+}

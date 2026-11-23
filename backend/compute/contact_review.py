@@ -19,7 +19,7 @@ from .contact_schema import ContactReview, LIMBS
 
 INPUTS = ('input_summary', 'holds', 'contacts', 'contact_events', 'frame_map')
 
-def inputs(task_id, owner_id):
+def inputs(task_id, owner_id, hold_version=None):
     result = input_review.prepared(task_id, owner_id)
     paths, hashes = {}, {}
     for name in INPUTS:
@@ -30,6 +30,10 @@ def inputs(task_id, owner_id):
         paths[name], hashes[name] = path, artifact['sha256']
     summary = json.loads(paths['input_summary'].read_text())
     holds = json.loads(paths['holds'].read_text())
+    if hold_version:
+        from . import hold_review
+        holds = hold_review.read(task_id, owner_id, hold_version)['holds']
+        hashes['hold_review_version'] = hold_version
     return result, summary, holds, paths, hashes
 
 def normalize(review: ContactReview, summary, holds):
@@ -73,9 +77,25 @@ def read_document(task_id, hashes, version=None):
         raise HTTPException(409, 'Contact review or its source inputs changed')
     return dict(version=version, **doc)
 
-def read(task_id, owner_id, version=None):
-    _, summary, holds, paths, hashes = inputs(task_id, owner_id)
+def pinned_holds(task_id, version=None):
+    root = folder(task_id)
+    if version is None:
+        if not (root/'latest.json').exists(): return None
+        version = json.loads((root/'latest.json').read_text())['version']
+    if len(version) != 64 or any(c not in '0123456789abcdef' for c in version):
+        raise HTTPException(422, 'Invalid contact review version')
+    path = root/(version+'.json')
+    if not path.exists(): raise HTTPException(404, 'Contact review version unavailable')
+    return json.loads(path.read_text())['review'].get('hold_review_version')
+
+def read(task_id, owner_id, version=None, hold_version=None):
+    input_review.prepared(task_id, owner_id)
+    pinned = pinned_holds(task_id, version)
+    _, summary, holds, paths, hashes = inputs(task_id, owner_id, pinned)
     doc = read_document(task_id, hashes, version)
+    if hold_version:
+        from . import hold_review
+        holds = hold_review.read(task_id, owner_id, hold_version)['holds']
     candidates = []
     with paths['contact_events'].open() as stream:
         for row in csv.DictReader(stream):
@@ -93,7 +113,7 @@ def atomic_json(path, value):
     temporary.replace(path)
 
 def save(task_id, owner_id, review: ContactReview):
-    result, summary, holds, _, hashes = inputs(task_id, owner_id)
+    result, summary, holds, _, hashes = inputs(task_id, owner_id, review.hold_review_version)
     try:
         normalized = normalize(review, summary, holds)
     except ValueError as error:
@@ -105,7 +125,8 @@ def save(task_id, owner_id, review: ContactReview):
     with database() as db:
         service.source(db, result['source_video_id'], owner_id, lock=True)
         db.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))', ('contact-review:'+str(task_id),))
-        current = read_document(task_id, hashes)
+        _, _, _, _, old_hashes = inputs(task_id, owner_id, pinned_holds(task_id))
+        current = read_document(task_id, old_hashes)
         if current and current['version'] == version: return current
         if (current['version'] if current else None) != review.base_version:
             raise HTTPException(409, 'Contact review changed; reload before saving')
@@ -121,7 +142,8 @@ def export(task_id, owner_id, version):
     Unannotated frames stay unknown. Confirmation never implies geometry passes.
     Original timestamps are retained from the immutable sampling map.
     """
-    _, summary, _, paths, hashes = inputs(task_id, owner_id)
+    input_review.prepared(task_id, owner_id)
+    _, summary, _, paths, hashes = inputs(task_id, owner_id, pinned_holds(task_id, version))
     doc = read_document(task_id, hashes, version)
     if not doc['review']['confirmed']:
         raise HTTPException(409, 'Confirm the contact review before exporting it for computation')

@@ -1,3 +1,5 @@
+import { DemoPlayer, SavedDemos, type PreparedDemo } from './DemoPreview'
+import { TaskProgress } from './TaskProgress'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { api, type Session } from '../api'
 import { ResultInsights } from './ResultInsights'
@@ -15,13 +17,14 @@ const dimensions = (body?: Body) => body ? `${body.height_cm} cm height · ${bod
 
 // Mounted once per signed-in user. Tasks live on the server, independently of pages.
 export function CommunityCompute({ session, source, closeSource, library, openLibrary, hideBell, renderLibrary = content => content }: Props) {
+  const [demo, setDemo] = useState<PreparedDemo | null>(null)
+  const [demoRefresh, setDemoRefresh] = useState(0)
   const [tasks, setTasks] = useState<Task[]>([])
   const [notes, setNotes] = useState<Note[]>([])
   const [unread, setUnread] = useState(0)
   const [taskCursor, setTaskCursor] = useState<string | null>(null)
   const [noteCursor, setNoteCursor] = useState<string | null>(null)
   const [selected, setSelected] = useState<Task | null>(null)
-  const [showTasks, setShowTasks] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
   const [reference, setReference] = useState<Source | null>(null)
   const [sourceError, setSourceError] = useState('')
@@ -72,13 +75,16 @@ export function CommunityCompute({ session, source, closeSource, library, openLi
   }, [session.user.id])
 
   useEffect(() => {
-    setReference(null); setSourceError('')
+    setReference(null); setDemo(null); setSourceError('')
     setHeight(session.user.height_cm?.toString() ?? ''); setSpan(session.user.arm_span_cm?.toString() ?? '')
     if (!source) return
     if (source.is_preset_sample || source.is_preset_beta) {
       setSourceError('This is a browsing sample. It has no linked source analysis for personal generation.'); return
     }
     const controller = new AbortController()
+    api<PreparedDemo>('/demo-previews/' + source.id, { signal: controller.signal }).then(value => {
+      if (!controller.signal.aborted) setDemo(value)
+    }).catch(() => { /* Ordinary videos use the scientific source-analysis flow below. */ })
     api<Source>('/tasks/source-analysis/' + source.id, { signal: controller.signal }).then(value => {
       if (!controller.signal.aborted) setReference(value)
     }).catch(e => { if (!controller.signal.aborted) setSourceError((e as Error).message + '. The uploader needs a supported source analysis before you can generate.') })
@@ -103,12 +109,12 @@ export function CommunityCompute({ session, source, closeSource, library, openLi
       source_analysis_id: reference.source_analysis_id, source_analysis_version: reference.source_analysis_version,
       target_body: { height_cm: Number(height), arm_span_cm: Number(span), provenance: 'user_input' }, compare_techniques: false })
     if (!alive.current) return
-    setTasks(old => [task, ...old.filter(t => t.id !== task.id)]); setSelected(task); setShowTasks(true); closeSource(); openLibrary()
+    setTasks(old => [task, ...old.filter(t => t.id !== task.id)]); setSelected(task); closeSource(); openLibrary()
   }
   async function openTask(id: string) {
     setSelected(null)
     const task = await api<Task>('/tasks/' + id)
-    if (alive.current) { setSelected(task); setShowTasks(true); openLibrary() }
+    if (alive.current) { setSelected(task); openLibrary() }
   }
   async function more(kind: 'tasks' | 'notifications') {
     const cursor = kind === 'tasks' ? taskCursor : noteCursor
@@ -130,8 +136,8 @@ export function CommunityCompute({ session, source, closeSource, library, openLi
 
     {error && <p className="compute-error" role="alert">{error} <button onClick={() => setError('')}>Dismiss</button></p>}
     {<section id="library-skeletons" className="compute-library" aria-label="My skeletons">
-      <h2>My skeletons</h2><p>Personal results and background tasks. You can leave this page while generation runs.</p>
-      {!tasks.length && <p>No tasks yet. Open a Community video to generate your own skeleton.</p>}
+      <h2>My skeletons</h2><SavedDemos refresh={demoRefresh} /><h3>Computation tasks</h3><p>Personal results and background tasks. You can leave this page while generation runs.</p>
+      {!tasks.length && <p>No computation tasks yet. Prepared demonstrations are listed separately above.</p>}
       {tasks.map(task => <button className="compute-row" key={task.id} onClick={() => void action(() => openTask(task.id))}>
         {task.kind === 'generate' ? 'Personal skeleton' : 'Source analysis'} · {task.state === 'running' && task.kind === 'analyze' ? 'Analyzing' : stateLabel[task.state]}{task.is_mock && ' · Mock'}<small>{new Date(task.created_at).toLocaleString()}</small>
       </button>)}
@@ -140,6 +146,7 @@ export function CommunityCompute({ session, source, closeSource, library, openLi
         <h3>{selected.kind === 'generate' ? 'Your skeleton' : 'Source analysis'}</h3>
         <p data-testid="main-task-state">{selected.state === 'running' && selected.kind === 'analyze' ? 'Analyzing' : stateLabel[selected.state]}{selected.is_mock && ' · Mock task'}</p>
         {['queued', 'running'].includes(selected.state) && <p>You can keep browsing. We will notify you when the task finishes.</p>}
+        <TaskProgress task={selected} />
         {selected.error && <p role="alert">{selected.error.message}</p>}
         {selected.state === 'failed' && selected.error?.retryable && <button disabled={busy} onClick={() => void action(async () => {
           const task = await submit('/tasks/' + selected.id + '/retry', {}); if (alive.current) { setSelected(task); setTasks(old => [task, ...old]) }
@@ -152,8 +159,12 @@ export function CommunityCompute({ session, source, closeSource, library, openLi
     </section>}
     </>)}
     {source && <div className="modal-backdrop"><section className="modal compute-modal" role="dialog" aria-modal="true" aria-label="Generate personal skeleton">
-      <h2>Generate your skeleton</h2>{error && <p role="alert">{error}</p>}<p>{source.title} · {source.display_name || source.username || 'Original climber'}</p>
-      {sourceError ? <p role="status">{sourceError}</p> : !reference ? <p>Checking source analysis…</p> : <>
+      <h2>{demo ? 'Prepared skeleton demo' : 'Generate your skeleton'}</h2>{error && <p role="alert">{error}</p>}<p>{source.title} · {source.display_name || source.username || 'Original climber'}</p>
+      {demo ? <><DemoPlayer demo={demo} /><p>Live computation is disabled for this demonstration. Saving does not run an algorithm.</p>
+        <button className="btn btn-solid" disabled={busy} onClick={() => void action(async () => {
+          await api('/demo-previews/' + demo.video_id + '/save', { method: 'POST', csrf: session.csrf_token })
+          if (alive.current) { setDemoRefresh(n => n + 1); closeSource(); openLibrary() }
+        })}>Save demo to My Skeletons</button></> : sourceError ? <p role="status">{sourceError}</p> : !reference ? <p>Checking source analysis…</p> : <>
         <p>Original climber: {dimensions(reference.original_body)}</p>
         <p className="compute-warning">{reference.is_mock ? 'Mock analysis' : 'Diagnostic source'} · Baseline: {reference.baseline_status}. Your result will remain a diagnostic preview. Technique comparison is not enabled.</p>
         <label>Height (cm)<input type="number" min="100" max="230" value={height} onChange={e => setHeight(e.target.value)} /></label>

@@ -23,6 +23,7 @@ class ContactInterval(BaseModel):
 
 class ContactReview(BaseModel):
     model_config = ConfigDict(extra='forbid', allow_inf_nan=False)
+    hold_review_version: str | None = Field(default=None, pattern=r'^[a-f0-9]{64}$')
     base_version: str | None = Field(default=None, pattern=r'^[a-f0-9]{64}$')
     intervals: list[ContactInterval] = Field(max_length=5000)
     confirmed: bool = False

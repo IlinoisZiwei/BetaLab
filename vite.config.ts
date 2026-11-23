@@ -42,7 +42,7 @@ export default defineConfig(({ mode }) => {
     server: {
       // Private inputs/results must not bypass API authorization via Vite's file server.
       fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/data/uploads/**',
-        '**/data/compute/**', '**/backend/compute/runs/**', '**/local-server/jobs/**'] },
+        '**/data/compute/**', '**/demo/*.local.json', '**/backend/compute/runs/**', '**/local-server/jobs/**'] },
       proxy: {
         '/api/auth': { target: apiTarget, changeOrigin: true },
         '/api/users': { target: apiTarget, changeOrigin: true },
@@ -50,6 +50,7 @@ export default defineConfig(({ mode }) => {
         '/api/profile': { target: apiTarget, changeOrigin: true },
         '/api/gyms': { target: apiTarget, changeOrigin: true },
         '/api/routes': { target: apiTarget, changeOrigin: true },
+        '/api/demo-previews': { target: apiTarget, changeOrigin: true },
         '/api/tasks': { target: apiTarget, changeOrigin: true },
         '/api/notifications': { target: apiTarget, changeOrigin: true },
         '/api/videos': { target: apiTarget, changeOrigin: true },

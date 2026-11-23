@@ -56,3 +56,19 @@
 
 - 记录每台设备的问题、负责人和修复结果（B5.3）。
 - 如需清除演示账号，在数据库中删除 `demo_*` 用户：其视频记录、评论、点赞、收藏和关注会随之删除（外键级联加迁移 014 的清理触发器）；上传目录中的视频文件不会自动删除，需要手动清理或用演示前的备份恢复。
+
+## C handoff update — 2026-11-21
+
+Use My Page → My Library → My Skeletons; notifications are opened from the bell. New tasks show true stages and elapsed time; migration 015 adds queue/processing timing without guessing historical starts.
+
+For new-video input review, show the full Trial3 extraction evidence (251 frames, 57 hold candidates, 1,004 limb observations; 73.94 s and 71.95 s). It is input preparation, not a generated skeleton. Demonstrate hold-center correction/addition, guided wall-panel/grid entry, contact version pinning and unknown angles. The saved real Trial3 contact draft is **not confirmed**; its initial left-foot candidate is unsupported because the foot begins on the floor. Do not enable generation or claim verified motion from that draft.
+
+The v5 fallback remains an unchanged, checksum-verified historical real diagnostic result with failed baselines. UI-only tests verify its recorded source hashes; they do not rewrite provenance. Latest two-account lifecycle tests use explicit mock computation. No new Trial2 source fitting or technique comparison was run in this round. Do not describe mock lifecycle testing as a fresh real source→target rehearsal.
+
+Local evidence: `backend/compute/runs/c-readiness/`. Backup verification covered the isolated acceptance database, uploads and compute files in a scratch restore; it did not replace live preview data. Keep credentials, media, archives and logs local. Confirm the presentation machine, a real phone and 3–5 participants before marking the final group rehearsal complete.
+
+## Three-case showcase (November 23, local only)
+
+Sign in as `betalab_showcase` using the password in ignored `demo/showcase.local.json`. In Community, open Trial1 or Trial3, choose Generate beta / Use skeleton, and show the **Pre-generated demonstration** label. Save to My Skeletons, refresh, and reopen under Saved demonstrations. Both new routes are in Movement Fishtown with venue-unverified demo metadata; their wall images come from the original recordings.
+
+Show the fixed target body: Trial1 and Trial3 use 180 cm/template proportions, not independently personalized arm span. The focused top pane is a planar schematic; the lower pane preserves the original. Corner Study keeps its historical dimensions and failed-baseline diagnostic. Do not describe a saved demo as a new computation or a verified technique result. The offline algorithm adapter passed input checks only; live browser generation remains disabled. No Trial2 fitting or technique comparison ran.

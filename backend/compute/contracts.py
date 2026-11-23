@@ -153,6 +153,8 @@ class Task(Model):
     retry_of: str | None = None
     created_at: str
     updated_at: str
+    started_at: str | None = None
+    finished_at: str | None = None
     result: Result | None = None
     error: Error | None = None
 

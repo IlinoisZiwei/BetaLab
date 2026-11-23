@@ -15,6 +15,7 @@ class Plane(BaseModel):
 
 class CalibrationReview(BaseModel):
     model_config = ConfigDict(extra='forbid',allow_inf_nan=False)
+    hold_review_version: str | None = Field(default=None, pattern=r'^[a-f0-9]{64}$')
     base_version: str | None = None
     grid_spacing_cm: Literal[14.3] = 14.3
     reference_frame: int = Field(ge=0)

@@ -13,13 +13,13 @@ SELECT = 'SELECT t.*, r.payload AS result FROM compute_tasks t LEFT JOIN compute
 
 def task_payload(row):
     keys = ('id','owner_id','source_video_id','kind','state','stage','is_mock','attempt','retry_of',
-            'created_at','updated_at','error','result')
+            'created_at','updated_at','started_at','finished_at','error','result')
     data = {k: row.get(k) for k in keys}
     for key in ('id','owner_id','source_video_id','retry_of'):
         if data[key] is not None:
             data[key] = str(data[key])
-    for key in ('created_at','updated_at'):
-        data[key] = data[key].isoformat()
+    for key in ('created_at','updated_at','started_at','finished_at'):
+        data[key] = data[key].isoformat() if data[key] else None
     return Task.model_validate(data).model_dump(mode='json')
 
 def source(db, video_id, user_id, lock=False):
@@ -61,6 +61,8 @@ def submit(request, owner_id, key, retry_of=None):
     fingerprint = hashlib.sha256(json.dumps(dict(request=request, retry_of=str(retry_of) if retry_of else None), sort_keys=True).encode()).hexdigest()
     with database() as db:
         video = check_request(db, request, owner_id)
+        if db.execute('SELECT 1 FROM demo_previews WHERE video_id=%s', (video['id'],)).fetchone():
+            raise HTTPException(409, 'Prepared demonstration: live computation is disabled; use the demo preview')
         # Serialize same user's key so concurrent retries cannot insert duplicates.
         db.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))', (str(owner_id)+':'+key,))
         old = db.execute(SELECT + 'WHERE t.owner_id=%s AND t.idempotency_key=%s', (owner_id,key)).fetchone()
@@ -156,7 +158,7 @@ def finish(db, task, result=None, error=None):
     if error is not None:
         error = Error.model_validate(error).model_dump()
     state = 'failed' if error else 'succeeded'
-    changed = db.execute('UPDATE compute_tasks SET state=%s,stage=%s,error=%s,updated_at=now() WHERE id=%s AND state=\'running\' RETURNING id',
+    changed = db.execute('UPDATE compute_tasks SET state=%s,stage=%s,error=%s,updated_at=now(),finished_at=now() WHERE id=%s AND state=\'running\' RETURNING id',
         (state,'failed' if error else 'complete',Jsonb(error) if error else None,task['id'])).fetchone()
     if not changed:
         return

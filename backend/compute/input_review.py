@@ -42,11 +42,13 @@ def save(task_id,owner_id,review):
     python=Path(os.getenv('BETA_TRANSLATOR_PYTHON',str(source/'.venv/bin/python')))
     summary=storage.resolve(result['artifacts']['input_summary']['storage_key'])
     holds=storage.resolve(result['artifacts']['holds']['storage_key'])
+    from . import hold_review
+    corrected = hold_review.read(task_id, owner_id, review.hold_review_version, latest=False)['holds']
     payload=review.model_dump(mode='json')
     # Pass only validated JSON through stdin; never interpolate user text in a shell.
     try:
         process=subprocess.run([str(python),'-m','backend.compute.input_calibration',str(summary),str(holds)],
-            input=json.dumps(payload),text=True,capture_output=True,timeout=60,cwd=Path(__file__).resolve().parents[2])
+            input=json.dumps({**payload, '_holds': corrected}),text=True,capture_output=True,timeout=60,cwd=Path(__file__).resolve().parents[2])
     except (OSError,subprocess.TimeoutExpired):
         raise HTTPException(503,'Calibration validator unavailable; retry after checking the local worker environment')
     if process.returncode:raise HTTPException(422,'Invalid panel calibration: '+process.stderr[-800:])

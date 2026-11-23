@@ -41,7 +41,7 @@ class Worker:
             task = db.execute("SELECT * FROM compute_tasks WHERE state='queued' ORDER BY created_at,id FOR UPDATE SKIP LOCKED LIMIT 1").fetchone()
             if not task:
                 return False
-            db.execute("UPDATE compute_tasks SET state='running',stage='checking_source',updated_at=now() WHERE id=%s", (task['id'],))
+            db.execute("UPDATE compute_tasks SET state='running',stage='checking_source',started_at=now(),updated_at=now() WHERE id=%s", (task['id'],))
         result = error = None
         try:
             with database() as db:

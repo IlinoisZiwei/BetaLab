@@ -26,7 +26,7 @@ export function ResultInsights({ task, csrf }: { task: Task | null; csrf?: strin
       <p className="compute-warning">{inputOnly ? 'Input preparation complete — review required' : result.is_mock ? 'Mock result' : 'Diagnostic preview'} · Baseline: {result.baseline_status}. This is not a verified climbing recommendation.</p>
       <a href={'/api/videos/' + result.source_video_id + '/content'} target="_blank" rel="noreferrer">Open original video</a>
       {playable && <video key={task!.id} ref={player} controls preload="metadata" aria-label={inputOnly ? 'Input reference video' : task!.kind === 'analyze' ? 'Source analysis video' : 'Personal skeleton video'}
-        src={'/api/tasks/' + task!.id + '/artifacts/video'} onError={() => setError('Video unavailable. Check source access or reopen the result.')} />}
+        src={'/api/tasks/' + task!.id + '/artifacts/' + (result.artifacts.display_video ? 'display_video' : 'video')} onError={() => setError('Video unavailable. Check source access or reopen the result.')} />}
       <details><summary>Result provenance and quality</summary><p>Source recording: {result.source_video_id}</p><p>Algorithm: {result.algorithm_version}</p>
         <p>Source analysis version: {result.source_analysis_version}</p><p>Checks performed: {result.quality.check_scope}</p>
         {result.quality.warnings.map(w => <p key={w}>{w}</p>)}

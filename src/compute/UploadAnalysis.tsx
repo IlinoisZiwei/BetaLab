@@ -1,3 +1,4 @@
+import { TaskProgress } from './TaskProgress'
 import { useEffect, useRef, useState } from 'react'
 import { api, type Session, type UserVideo } from '../api'
 import type { Task } from './results'
@@ -59,6 +60,7 @@ export function UploadAnalysis({ video, session, submissionPending, onStatus, on
       <p>{task.state === 'succeeded' ? (task.result?.algorithm_version === 'video-inputs-v1' ? 'Input preparation complete — review required' : 'Analysis completed') : labels[task.state]}{task.is_mock && ' · Mock task'}</p>
       {['queued', 'running'].includes(task.state) && <p>You can leave this page. Find the task in My Library; a notification will arrive when it finishes.</p>}
       {task.state === 'succeeded' && <p>Baseline: {task.result?.baseline_status}. Analysis completion does not certify a feasible climbing movement. Open My skeletons for the video and diagnostics.</p>}
+      <TaskProgress task={task} />
       {task.error && <p role="alert">{task.error.message}</p>}
       {task.state === 'failed' && !task.error?.retryable && <p>This failure cannot be retried automatically. The source inputs or analysis version need correction.</p>}
       {task.state === 'failed' && task.error?.retryable && <button className="btn btn-outline" disabled={busy || submissionPending} onClick={() => void startOrRetry()}>Retry analysis</button>}
